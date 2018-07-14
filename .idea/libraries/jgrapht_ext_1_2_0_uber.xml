@@ -1,0 +1,23 @@
+<component name="libraryTable">
+  <library name="jgrapht-ext-1.2.0-uber">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/lib/jgrapht-ext-1.2.0-uber.jar!/" />
+      <root url="jar://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/lib/jgrapht-io-1.2.0-uber.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/javadoc" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-core/src/main/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-core/src/test/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-demo/src/main/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-ext/src/main/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-ext/src/test/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-guava/src/main/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-guava/src/test/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-io/src/main/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-io/src/test/java" />
+      <root url="file://$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/PTools/jgrapht-1.2.0/source/jgrapht-touchgraph/src/main/java" />
+    </SOURCES>
+  </library>
+</component>
