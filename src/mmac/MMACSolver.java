@@ -1,8 +1,6 @@
 package mmac;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 import org.jetbrains.annotations.NotNull;
@@ -81,6 +79,50 @@ public class MMACSolver {
             newPos = p;
             delta = d;
         }
+
+        public String toString(){
+            return "Move Node: " + node.ID + ", " + node.pos + "->" + newPos + "/" +delta;
+        }
+    }
+
+    private class Solution{
+        int M;
+        ArrayList<ArrayList<Integer>> sol;
+        String instance;
+
+        Solution(MMACSolver solver) throws IOException {
+            solver.checkSolution();
+            instance = solver.instance;
+            M = solver.edgeFibonacciHeap.min().getData().cross;
+            sol = new ArrayList<>(solver.layers.size());
+            for (ArrayList<Node> layer : solver.layers){
+                ArrayList<Integer> nodeIndexes = new ArrayList<>(layer.size());
+                for (Node n : layer){
+                    nodeIndexes.add(n.ID);
+                }
+                sol.add(nodeIndexes);
+            }
+            write();
+        }
+
+        void write() throws IOException {
+            String outFile = "sol/sol" + M + ".txt";
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
+
+            bw.write(instance);
+            bw.newLine();
+            bw.write(("Time: " + (System.currentTimeMillis() - startTime)/1000.0) + " seconds\n");
+            bw.write("Objective: " + String.valueOf(M));
+            bw.newLine();
+            bw.write("Solution: \n");
+            for (ArrayList<Integer> layer : sol){
+                for (Integer n : layer){
+                    bw.write(n + " ");
+                }
+                bw.newLine();
+            }
+            bw.close();
+        }
     }
 
     private class Delta implements Comparable{
@@ -89,6 +131,11 @@ public class MMACSolver {
         Delta(int dM, int dC){
             deltaM = dM;
             deltaCross = dC;
+        }
+
+        @Override
+        public String toString(){
+            return "dM: " + deltaM + ", dC: " + deltaCross;
         }
 
         @Override
@@ -111,7 +158,12 @@ public class MMACSolver {
 
     private Random random = new Random(0);
 
+    private String instance;
+
+    private long startTime;
+
     public MMACSolver(String instanceFile) throws IOException {
+        instance = instanceFile;
         BufferedReader br = new BufferedReader(new FileReader(instanceFile));
 
         String line = br.readLine();
@@ -188,10 +240,10 @@ public class MMACSolver {
 //        return true;
 //    }
 
-    public int solve() {
+    public void solve() throws IOException {
+        startTime = System.currentTimeMillis();
         init();
         localSearch();
-        return 0;
     }
 
     private void initM() {
@@ -241,21 +293,32 @@ public class MMACSolver {
 
     private void init() {
         initM();
-        //checkSolution();
         System.out.println("Initial obj: "+ edgeFibonacciHeap.min().getData().cross);
     }
 
-    private void localSearch() {
+    private void localSearch() throws IOException {
         int iter = 0;
+
+        Solution bestSol = new Solution(this);
+        boolean wFlag = false;
+
         for(;;++iter) {
             Move mv = findMove();
+            if (!wFlag && mv.delta.deltaM >= 0){
+                wFlag = true;
+                bestSol = new Solution(this);
+            }
             if (mv.delta.deltaCross >=0 && mv.delta.deltaM >=0 )break;
             makeMove(mv);
-            checkSolution();//TODO: remove this line
             int obj = edgeFibonacciHeap.min().getData().cross;
             System.out.println("Iteration: " + iter + " Obj:" + obj);
 
-            if (obj == 0)break;
+            if (wFlag && obj < bestSol.M){
+                bestSol = new Solution(this);
+            }
+
+            if (obj == 0) break;
+
         }
 
         checkSolution();
@@ -268,7 +331,20 @@ public class MMACSolver {
         int currM = getM();
         Delta delta = new Delta(0,0);
 
-        for (Node node : layers.get(n.layerID)){
+        int lbIndex;
+        int ubIndex;
+        if (n.pos < newPos){
+            lbIndex = n.pos;
+            ubIndex = newPos;
+        }else{
+            lbIndex = newPos;
+            ubIndex = n.pos;
+        }
+
+        ArrayList<Node> layer = layers.get(n.layerID);
+        //for (Node node : layers.get(n.layerID)){
+        for(int index = lbIndex; index<=ubIndex; ++index){
+            Node node = layer.get(index);
             for (Edge e : node.outEdges){
                 int i = calcNewPos(n.pos, newPos, node.pos);
                 int j = e.sink.pos;
@@ -286,7 +362,9 @@ public class MMACSolver {
             }
         }
 
-        for (Node node : layers.get(n.layerID)){
+//        for (Node node : layers.get(n.layerID)){
+        for(int index = lbIndex; index<=ubIndex; ++index){
+            Node node = layer.get(index);
             for (Edge e : node.inEdges){
                 int i = e.source.pos;
                 int j = calcNewPos(n.pos, newPos, e.sink.pos);
@@ -309,8 +387,10 @@ public class MMACSolver {
 
     private void updateDelta(Delta delta, int newCross, int oriCross, int M){
         delta.deltaCross += newCross - oriCross;
-        if (oriCross < M && newCross >= M){
+        if (oriCross < M && newCross == M) {
             delta.deltaM += 1;
+        }else if (oriCross < M && newCross > M){
+            delta.deltaM += 1000;
         }else if (oriCross == M && newCross < M){
             delta.deltaM -= 1;
         }
@@ -356,15 +436,22 @@ public class MMACSolver {
     }
 
     private void makeMove(Move mv){
+        System.out.println(mv);
         ArrayList<Node> layer = layers.get(mv.node.layerID);
 
+        int lbIndex;
+        int ubIndex;
+
         if (mv.newPos > mv.node.pos){
+            lbIndex = mv.node.pos;
+            ubIndex = mv.newPos;
             for(int i = mv.node.pos; i < mv.newPos; ++i){
                 layer.set(i, layer.get(i+1));
                 layer.get(i).pos -= 1;
             }
-
         }else{
+            lbIndex = mv.newPos;
+            ubIndex = mv.node.pos;
             for(int i = mv.node.pos; i >mv.newPos; --i){
                 layer.set(i, layer.get(i-1));
                 layer.get(i).pos += 1;
@@ -373,7 +460,9 @@ public class MMACSolver {
         layer.set(mv.newPos, mv.node);
         mv.node.pos = mv.newPos;
 
-        for (Node node : layer){
+//        for (Node node : layer){
+        for(int index = lbIndex; index<=ubIndex; ++index){
+            Node node = layer.get(index);
             for (Edge e : node.outEdges){
                 int i= e.source.pos;
                 int j = e.sink.pos;
@@ -391,7 +480,9 @@ public class MMACSolver {
             }
         }
 
-        for (Node node : layer){
+//        for (Node node : layer){
+        for(int index = lbIndex; index<=ubIndex; ++index){
+            Node node = layer.get(index);
             for (Edge e : node.inEdges){
                 int i = e.source.pos;
                 int j = e.sink.pos;
@@ -423,7 +514,7 @@ public class MMACSolver {
         e.cross = newCross;
     }
 
-    private boolean checkSolution(){
+    private void checkSolution(){
         for (ArrayList<Node> layer : layers){
             for (Node node : layer){
                 for (Edge e : node.outEdges){
@@ -449,6 +540,5 @@ public class MMACSolver {
                 }
             }
         }
-        return true;
     }
 }
