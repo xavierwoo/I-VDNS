@@ -342,51 +342,58 @@ public class MMACSolver {
         }
 
         ArrayList<Node> layer = layers.get(n.layerID);
-        //for (Node node : layers.get(n.layerID)){
         for(int index = lbIndex; index<=ubIndex; ++index){
             Node node = layer.get(index);
             for (Edge e : node.outEdges){
-                int i = calcNewPos(n.pos, newPos, node.pos);
+                int iO = node.pos;
+                int iN = calcNewPos(n.pos, newPos, node.pos);
                 int j = e.sink.pos;
-                int currCross = 0;
-                for (Node nodeP : layers.get(n.layerID)){
+                int deltaCross = 0;
+                for (int indexP = lbIndex; indexP<=ubIndex; ++indexP){
+                    Node nodeP = layer.get(indexP);
                     if (nodeP == node)continue;
                     for (Edge eP : nodeP.outEdges){
-                        int k = calcNewPos(n.pos, newPos, nodeP.pos);
+                        int kO = nodeP.pos;
+                        int kN = calcNewPos(n.pos, newPos, nodeP.pos);
                         int l = eP.sink.pos;
                         if (j == l)continue;
-                        currCross += isCross(i,j,k,l) ? 1 : 0;
+                        deltaCross += (isCross(iN,j,kN,l) ? 1 : 0)
+                        - (isCross(iO, j, kO, l) ? 1 : 0);
                     }
                 }
-                updateDelta(delta, currCross, e.cross, currM);
+                updateDelta(delta, deltaCross, e.cross, currM);
             }
         }
 
-//        for (Node node : layers.get(n.layerID)){
         for(int index = lbIndex; index<=ubIndex; ++index){
             Node node = layer.get(index);
             for (Edge e : node.inEdges){
                 int i = e.source.pos;
-                int j = calcNewPos(n.pos, newPos, e.sink.pos);
-                int currCross = 0;
-                for (Node nodeP : layers.get(n.layerID)){
+                int jO = node.pos;
+                int jN = calcNewPos(n.pos, newPos, e.sink.pos);
+                int deltaCross = 0;
+                for (int  indexP = lbIndex; indexP<=ubIndex; ++indexP){
+                    Node nodeP = layer.get(indexP);
                     if (nodeP == node) continue;
                     for (Edge eP : nodeP.inEdges){
                         int k = eP.source.pos;
                         if (k == i)continue;
-                        int l = calcNewPos(n.pos, newPos, eP.sink.pos);
-                        currCross += isCross(i,j,k,l) ? 1 : 0;
+                        int lO = nodeP.pos;
+                        int lN = calcNewPos(n.pos, newPos, eP.sink.pos);
+                        deltaCross += (isCross(i,jN,k,lN) ? 1 : 0)
+                        -(isCross(i, jO, k, lO) ? 1 : 0);
                     }
                 }
-                updateDelta(delta, currCross, e.cross, currM);
+                updateDelta(delta, deltaCross, e.cross, currM);
             }
         }
 
         return delta;
     }
 
-    private void updateDelta(Delta delta, int newCross, int oriCross, int M){
-        delta.deltaCross += newCross - oriCross;
+    private void updateDelta(Delta delta, int deltaCross, int oriCross, int M){
+        delta.deltaCross += deltaCross;
+        int newCross = oriCross + deltaCross;
         if (oriCross < M && newCross == M) {
             delta.deltaM += 1;
         }else if (oriCross < M && newCross > M){
@@ -441,17 +448,67 @@ public class MMACSolver {
 
         int lbIndex;
         int ubIndex;
-
         if (mv.newPos > mv.node.pos){
             lbIndex = mv.node.pos;
             ubIndex = mv.newPos;
+        }else{
+            lbIndex = mv.newPos;
+            ubIndex = mv.node.pos;
+        }
+
+        for(int index = lbIndex; index<=ubIndex; ++index){
+            Node node = layer.get(index);
+            for (Edge e : node.outEdges){
+                int iO= node.pos;
+                int iN = calcNewPos(mv.node.pos, mv.newPos, node.pos);
+                int j = e.sink.pos;
+                int deltaCross = 0;
+                for (int indexP = lbIndex; indexP<=ubIndex; ++indexP){
+                    Node nodeP = layer.get(indexP);
+                    if (nodeP == node)continue;
+                    for (Edge eP :nodeP.outEdges){
+                        int kO = nodeP.pos;
+                        int kN = calcNewPos(mv.node.pos, mv.newPos, nodeP.pos);
+                        int l = eP.sink.pos;
+                        if (j==l)continue;
+                        deltaCross += (isCross(iN,j,kN,l) ? 1 : 0)
+                                - (isCross(iO, j, kO, l) ? 1 : 0);
+                    }
+                }
+                updateEdgeCross(e, e.cross + deltaCross);
+            }
+        }
+
+        for(int index = lbIndex; index<=ubIndex; ++index){
+            Node node = layer.get(index);
+            for (Edge e : node.inEdges){
+                int i = e.source.pos;
+                int jO = node.pos;
+                int jN = calcNewPos(mv.node.pos, mv.newPos, node.pos);
+                int deltaCross = 0;
+                for(int indexP = lbIndex; indexP<=ubIndex; ++indexP){
+                    Node nodeP = layer.get(indexP);
+                    if (nodeP == node) continue;
+                    for (Edge eP : nodeP.inEdges){
+                        int k = eP.source.pos;
+                        if (k == i)continue;
+                        int lO = nodeP.pos;
+                        int lN = calcNewPos(mv.node.pos, mv.newPos, nodeP.pos);
+                        deltaCross += (isCross(i,jN,k,lN) ? 1 : 0)
+                        -(isCross(i, jO, k, lO) ? 1 : 0);
+                    }
+                }
+                updateEdgeCross(e, e.cross + deltaCross);
+            }
+        }
+
+        //resort nodes in layer
+        if (mv.newPos > mv.node.pos){
             for(int i = mv.node.pos; i < mv.newPos; ++i){
                 layer.set(i, layer.get(i+1));
                 layer.get(i).pos -= 1;
             }
         }else{
-            lbIndex = mv.newPos;
-            ubIndex = mv.node.pos;
             for(int i = mv.node.pos; i >mv.newPos; --i){
                 layer.set(i, layer.get(i-1));
                 layer.get(i).pos += 1;
@@ -459,46 +516,6 @@ public class MMACSolver {
         }
         layer.set(mv.newPos, mv.node);
         mv.node.pos = mv.newPos;
-
-//        for (Node node : layer){
-        for(int index = lbIndex; index<=ubIndex; ++index){
-            Node node = layer.get(index);
-            for (Edge e : node.outEdges){
-                int i= e.source.pos;
-                int j = e.sink.pos;
-                int currCross = 0;
-                for (Node nodeP: layer){
-                    if (nodeP == node)continue;
-                    for (Edge eP :nodeP.outEdges){
-                        int k = eP.source.pos;
-                        int l = eP.sink.pos;
-                        if (j==l)continue;
-                        currCross += isCross(i,j,k,l) ? 1 : 0;
-                    }
-                }
-                updateEdgeCross(e, currCross);
-            }
-        }
-
-//        for (Node node : layer){
-        for(int index = lbIndex; index<=ubIndex; ++index){
-            Node node = layer.get(index);
-            for (Edge e : node.inEdges){
-                int i = e.source.pos;
-                int j = e.sink.pos;
-                int currCross = 0;
-                for (Node nodeP : layer){
-                    if (nodeP == node) continue;
-                    for (Edge eP : nodeP.inEdges){
-                        int k = eP.source.pos;
-                        if (k == i)continue;
-                        int l = eP.sink.pos;
-                        currCross += isCross(i,j,k,l) ? 1 : 0;
-                    }
-                }
-                updateEdgeCross(e, currCross);
-            }
-        }
     }
 
     private void updateEdgeCross(Edge e, int newCross){
