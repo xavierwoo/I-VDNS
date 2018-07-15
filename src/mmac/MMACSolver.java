@@ -9,157 +9,13 @@ import org.jgrapht.util.FibonacciHeapNode;
 
 public class MMACSolver {
 
-    private class Node {
-        int ID;
-        int layerID;
-        int pos;
-        ArrayList<Edge> outEdges = new ArrayList<>();
-        ArrayList<Edge> inEdges = new ArrayList<>();
-
-        Node(int id, int lyid) {
-            ID = id;
-            layerID = lyid;
-        }
-
-        @Override
-        public String toString() {
-            return String.valueOf(ID);
-        }
-
-//        @Override
-//        public int hashCode(){
-//            return Objects.hash(ID);
-//        }
-//
-//        @Override
-//        public boolean equals(Object o){
-//            return o!=null && o.getClass() == Node.class && ID == ((Node)o).ID;
-//        }
-    }
-
-    private class Edge {
-        Node source;
-        Node sink;
-
-        int cross = 0;
-
-        FibonacciHeapNode<Edge> fHeapNode;
-
-        Edge(Node src, Node snk) {
-            source = src;
-            sink = snk;
-            fHeapNode = new FibonacciHeapNode<>(this);
-        }
-
-        @Override
-        public String toString() {
-            return "(" + source + "," + sink + ")";
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(source.ID, sink.ID);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            return o != null && o.getClass() == Edge.class
-                    && source.ID == ((Edge) o).source.ID
-                    && sink.ID == ((Edge) o).sink.ID;
-        }
-    }
-
-    private class Move {
-        Node node;
-        int newPos;
-        Delta delta;
-
-        Move(Node n, int p, Delta d) {
-            node = n;
-            newPos = p;
-            delta = d;
-        }
-
-        public String toString(){
-            return "Move Node: " + node.ID + ", " + node.pos + "->" + newPos + "/" +delta;
-        }
-    }
-
-    private class Solution{
-        int M;
-        ArrayList<ArrayList<Integer>> sol;
-        String instance;
-
-        Solution(MMACSolver solver) throws IOException {
-            solver.checkSolution();
-            instance = solver.instance;
-            M = solver.edgeFibonacciHeap.min().getData().cross;
-            sol = new ArrayList<>(solver.layers.size());
-            for (ArrayList<Node> layer : solver.layers){
-                ArrayList<Integer> nodeIndexes = new ArrayList<>(layer.size());
-                for (Node n : layer){
-                    nodeIndexes.add(n.ID);
-                }
-                sol.add(nodeIndexes);
-            }
-            write();
-        }
-
-        void write() throws IOException {
-            String outFile = "sol/sol" + M + ".txt";
-            BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
-
-            bw.write(instance);
-            bw.newLine();
-            bw.write(("Time: " + (System.currentTimeMillis() - startTime)/1000.0) + " seconds\n");
-            bw.write("Objective: " + String.valueOf(M));
-            bw.newLine();
-            bw.write("Solution: \n");
-            for (ArrayList<Integer> layer : sol){
-                for (Integer n : layer){
-                    bw.write(n + " ");
-                }
-                bw.newLine();
-            }
-            bw.close();
-        }
-    }
-
-    private class Delta implements Comparable{
-        int deltaM;
-        int deltaCross;
-        Delta(int dM, int dC){
-            deltaM = dM;
-            deltaCross = dC;
-        }
-
-        @Override
-        public String toString(){
-            return "dM: " + deltaM + ", dC: " + deltaCross;
-        }
-
-        @Override
-        public int compareTo(@NotNull Object o) {
-            Delta oo = (Delta)o;
-            if (deltaM < oo.deltaM){
-                return -1;
-            }else if (deltaM > oo.deltaM){
-                return 1;
-            }else{
-                return Integer.compare(deltaCross, oo.deltaCross);
-            }
-        }
-    }
-
+    private final int LAMBDA = 10000;
+    private final int MOVE_MAX_DISTANCE = 10;
     private ArrayList<ArrayList<Node>> layers;
-    //private HashSet<Edge> mostCrossEdges = new HashSet<>();
-
     private FibonacciHeap<Edge> edgeFibonacciHeap = new FibonacciHeap<>();
-
-    private Random random = new Random(0);
-
+    private Random random = new Random();
     private String instance;
-
+    //private HashSet<Edge> mostCrossEdges = new HashSet<>();
     private long startTime;
 
     public MMACSolver(String instanceFile) throws IOException {
@@ -212,34 +68,6 @@ public class MMACSolver {
         //checkGraph();
     }
 
-//    private boolean checkGraph(){
-//        for (ArrayList<Node> layer : layers){
-//            for (Node node : layer){
-//                for(Edge e : node.outEdges){
-//                    Node source = e.source;
-//                    if (source != node){
-//                        throw new Error("checkGraph 1");
-//                    }
-//                    Node sink = e.sink;
-//                    if (!sink.inEdges.contains(e)){
-//                        throw new Error("checkGraph 2");
-//                    }
-//                }
-//                for (Edge e : node.inEdges){
-//                    Node source = e.source;
-//                    Node sink = e.sink;
-//                    if (sink != node){
-//                        throw new Error("checkGraph 3");
-//                    }
-//                    if (!source.outEdges.contains(e)){
-//                        throw new Error("checkGraph 4");
-//                    }
-//                }
-//            }
-//        }
-//        return true;
-//    }
-
     public void solve() throws IOException {
         startTime = System.currentTimeMillis();
         init();
@@ -261,7 +89,6 @@ public class MMACSolver {
     private int getM(){
         return edgeFibonacciHeap.min().getData().cross;
     }
-
 
     /***
      * check if (i,j) and (k, l) is a cross
@@ -291,30 +118,149 @@ public class MMACSolver {
         return lam;
     }
 
+//    private boolean checkGraph(){
+//        for (ArrayList<Node> layer : layers){
+//            for (Node node : layer){
+//                for(Edge e : node.outEdges){
+//                    Node source = e.source;
+//                    if (source != node){
+//                        throw new Error("checkGraph 1");
+//                    }
+//                    Node sink = e.sink;
+//                    if (!sink.inEdges.contains(e)){
+//                        throw new Error("checkGraph 2");
+//                    }
+//                }
+//                for (Edge e : node.inEdges){
+//                    Node source = e.source;
+//                    Node sink = e.sink;
+//                    if (sink != node){
+//                        throw new Error("checkGraph 3");
+//                    }
+//                    if (!source.outEdges.contains(e)){
+//                        throw new Error("checkGraph 4");
+//                    }
+//                }
+//            }
+//        }
+//        return true;
+//    }
+
     private void init() {
+        System.out.println("Initializing...");
+        constructSolution();
         initM();
         System.out.println("Initial obj: "+ edgeFibonacciHeap.min().getData().cross);
+    }
+
+    private void constructSolution(){
+        var CL = new HashSet<Node>();
+        var V = new HashSet<Node>();
+        for (ArrayList<Node> layer : layers){
+            CL.addAll(layer);
+        }
+
+        int lP = random.nextInt(layers.size());
+        int vP = random.nextInt(layers.get(lP).size());
+        Node vStar = layers.get(lP).get(vP);
+        vStar.pos = 0;
+        CL.remove(vStar);
+        V.add(vStar);
+
+        while(!CL.isEmpty()){
+            ArrayList<Node> RCL = getRCL(V);
+            vStar = RCL.get(random.nextInt(RCL.size()));
+            int bc = calcBC(vStar, V);
+            vStar.pos = findBCNearst(layers.get(vStar.layerID), bc, V);
+
+            CL.remove(vStar);
+            V.add(vStar);
+        }
+
+        for (ArrayList<Node> layer : layers){
+            layer.sort(Comparator.comparing(a->a.pos));
+            for (int i=0; i<layer.size(); ++i){
+                layer.get(i).pos = i;
+            }
+        }
+    }
+
+    private int findBCNearst(ArrayList<Node> layer, int bc, HashSet<Node> V){
+        var usedPos = new HashSet<Integer>();
+        for (Node node : layer){
+            if (V.contains(node)){
+                usedPos.add(node.pos);
+            }
+        }
+        if (!usedPos.contains(bc)) return bc;
+        for (int i=1; ;++i){
+            if (!usedPos.contains(bc + i)) return bc +i;
+            if (!usedPos.contains(bc-i)) return bc - i;
+        }
+    }
+
+    private int calcBC(Node vStar, HashSet<Node> V){
+        int count = 0;
+        int sum = 0;
+        for (Edge e : vStar.outEdges){
+            if (V.contains(e.sink)){
+                ++count;
+                sum += e.sink.pos;
+            }
+        }
+        for (Edge e : vStar.inEdges){
+            if (V.contains(e.source)){
+                ++count;
+                sum += e.source.pos;
+            }
+        }
+        return sum / count;
+    }
+
+    private int calcD(Node node, HashSet<Node> V){
+        int d = 0;
+        for (Edge e : node.outEdges){
+            if (V.contains(e.sink))++d;
+        }
+        for (Edge e:node.inEdges){
+            if (V.contains(e.source))++d;
+        }
+        return d;
+    }
+
+    private ArrayList<Node> getRCL(HashSet<Node> V){
+        var RCL = new ArrayList<Node>();
+        for (Node node : V){
+            for (Edge e : node.outEdges){
+                RCL.add(e.sink);
+            }
+            for (Edge e : node.inEdges){
+                RCL.add(e.source);
+            }
+        }
+        return RCL;
     }
 
     private void localSearch() throws IOException {
         int iter = 0;
 
-        Solution bestSol = new Solution(this);
+        Solution bestSol = new Solution(this, false);
         boolean wFlag = false;
-
+        var moveDistances = new ArrayList<Integer>();
         for(;;++iter) {
             Move mv = findMove();
             if (!wFlag && mv.delta.deltaM >= 0){
                 wFlag = true;
-                bestSol = new Solution(this);
+                bestSol = new Solution(this, false);
             }
             if (mv.delta.deltaCross >=0 && mv.delta.deltaM >=0 )break;
+            moveDistances.add(Math.abs(mv.newPos - mv.node.pos));
             makeMove(mv);
             int obj = edgeFibonacciHeap.min().getData().cross;
             System.out.println("Iteration: " + iter + " Obj:" + obj);
 
             if (wFlag && obj < bestSol.M){
-                bestSol = new Solution(this);
+                bestSol = new Solution(this, false);
             }
 
             if (obj == 0) break;
@@ -322,8 +268,21 @@ public class MMACSolver {
         }
 
         checkSolution();
+        if (edgeFibonacciHeap.min().getData().cross <= bestSol.M) {
+            new Solution(this, true);
+        }
         System.out.println("Iteration: " + iter);
         System.out.println(edgeFibonacciHeap.min().getData().cross);
+
+        writeMoveDistances(moveDistances);
+    }
+
+    private void writeMoveDistances(ArrayList<Integer> distances) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new FileWriter("moveDistances.txt"));
+        for (Integer d : distances){
+            bw.write(d + ",");
+        }
+        bw.close();
     }
 
     private Delta checkMoveCross(Node n, int newPos){
@@ -362,6 +321,10 @@ public class MMACSolver {
                     }
                 }
                 updateDelta(delta, deltaCross, e.cross, currM);
+                if (delta.deltaM > LAMBDA / 2){
+                    //System.err.println("Drop move, deltaM:" + delta.deltaM);
+                    return null;
+                }
             }
         }
 
@@ -385,6 +348,10 @@ public class MMACSolver {
                     }
                 }
                 updateDelta(delta, deltaCross, e.cross, currM);
+                if (delta.deltaM > LAMBDA / 2){
+                    //System.err.println("Drop move, deltaM:" + delta.deltaM);
+                    return null;
+                }
             }
         }
 
@@ -396,8 +363,8 @@ public class MMACSolver {
         int newCross = oriCross + deltaCross;
         if (oriCross < M && newCross == M) {
             delta.deltaM += 1;
-        }else if (oriCross < M && newCross > M){
-            delta.deltaM += 1000;
+        }else if (oriCross <= M && newCross > M){
+            delta.deltaM += LAMBDA * (newCross - M);
         }else if (oriCross == M && newCross < M){
             delta.deltaM -= 1;
         }
@@ -427,8 +394,12 @@ public class MMACSolver {
         for (ArrayList<Node> layer : layers){
             for (Node n : layer){
                 for (int i = 0; i < layer.size(); ++i){
-                    if (i == n.pos)continue;
+                    if (i == n.pos || i == n.pos - 1 || Math.abs(n.pos - i) > MOVE_MAX_DISTANCE)continue;
                     Delta delta = checkMoveCross(n, i);
+                    if (delta == null)continue;
+//                    if(delta.deltaM < 0){
+//                        return new Move(n,i,delta);
+//                    }
                     int cmp = delta.compareTo(bestMv.delta);
                     if( cmp < 0){
                         bestMv = new Move(n, i, delta);
@@ -532,6 +503,7 @@ public class MMACSolver {
     }
 
     private void checkSolution(){
+        int M = 0;
         for (ArrayList<Node> layer : layers){
             for (Node node : layer){
                 for (Edge e : node.outEdges){
@@ -554,7 +526,175 @@ public class MMACSolver {
                     if (Double.compare(1.0/e.cross, e.fHeapNode.getKey()) != 0){
                         throw new Error("Cross consistency error!");
                     }
+
+                    if (M < currCross){
+                        M = currCross;
+                    }
                 }
+            }
+        }
+        if (edgeFibonacciHeap.min().getData().cross != M){
+            throw new Error("FibonacciHeap error!");
+        }
+    }
+
+    private class MvDisManager{
+        private int[] lastDis = new int[10];
+        private int pos = 0;
+
+        void record(int dis){
+            lastDis[pos] = dis;
+            ++pos;
+            if (pos == lastDis.length) pos = 0;
+        }
+
+        int getMax(){
+            int m = 0;
+            for (int d : lastDis){
+                if (d > m) m = d;
+            }
+            return m;
+        }
+    }
+
+    private class Node {
+        int ID;
+        int layerID;
+        int pos;
+        ArrayList<Edge> outEdges = new ArrayList<>();
+        ArrayList<Edge> inEdges = new ArrayList<>();
+
+        Node(int id, int lyid) {
+            ID = id;
+            layerID = lyid;
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(ID);
+        }
+
+        @Override
+        public int hashCode(){
+            return Objects.hash(ID);
+        }
+
+        @Override
+        public boolean equals(Object o){
+            return o!=null && o.getClass() == Node.class && ID == ((Node)o).ID;
+        }
+    }
+
+    private class Edge {
+        Node source;
+        Node sink;
+
+        int cross = 0;
+
+        FibonacciHeapNode<Edge> fHeapNode;
+
+        Edge(Node src, Node snk) {
+            source = src;
+            sink = snk;
+            fHeapNode = new FibonacciHeapNode<>(this);
+        }
+
+        @Override
+        public String toString() {
+            return "(" + source + "," + sink + ")";
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(source.ID, sink.ID);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o != null && o.getClass() == Edge.class
+                    && source.ID == ((Edge) o).source.ID
+                    && sink.ID == ((Edge) o).sink.ID;
+        }
+    }
+
+    private class Move {
+        Node node;
+        int newPos;
+        Delta delta;
+
+        Move(Node n, int p, Delta d) {
+            node = n;
+            newPos = p;
+            delta = d;
+        }
+
+        public String toString(){
+            return "Move Node: " + node.ID + ", " + node.pos + "->" + newPos + "/" +delta;
+        }
+    }
+
+    private class Solution{
+        int M;
+        ArrayList<ArrayList<Integer>> sol;
+        String instance;
+
+        Solution(MMACSolver solver, boolean isFinal) throws IOException {
+            solver.checkSolution();
+            instance = solver.instance;
+            M = solver.edgeFibonacciHeap.min().getData().cross;
+            sol = new ArrayList<>(solver.layers.size());
+            for (ArrayList<Node> layer : solver.layers){
+                ArrayList<Integer> nodeIndexes = new ArrayList<>(layer.size());
+                for (Node n : layer){
+                    nodeIndexes.add(n.ID);
+                }
+                sol.add(nodeIndexes);
+            }
+            write(isFinal);
+        }
+
+        void write(boolean isFinal) throws IOException {
+            String outFile = "sol/sol" + M + (isFinal ? "F" : "")  + ".txt";
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
+
+            bw.write(instance);
+            bw.newLine();
+            bw.write(("Time: " + (System.currentTimeMillis() - startTime)/1000.0) + " seconds\n");
+            bw.write("Objective: " + String.valueOf(M));
+            bw.newLine();
+            bw.write("Solution: \n");
+            for (ArrayList<Integer> layer : sol){
+                for (Integer n : layer){
+                    bw.write(n + " ");
+                }
+                bw.newLine();
+            }
+            bw.close();
+        }
+    }
+
+    private class Delta implements Comparable{
+        int deltaM;
+        int deltaCross;
+        Delta(int dM, int dC){
+            deltaM = dM;
+            deltaCross = dC;
+        }
+
+        @Override
+        public String toString(){
+            return "dM: " + deltaM + ", dC: " + deltaCross;
+        }
+
+        @Override
+        public int compareTo(@NotNull Object o) {
+            Delta oo = (Delta)o;
+            if (deltaM < oo.deltaM){
+                return -1;
+            }else if (deltaM > oo.deltaM){
+                return 1;
+            }else{
+                return Integer.compare(deltaCross, oo.deltaCross);
             }
         }
     }
