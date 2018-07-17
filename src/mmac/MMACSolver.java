@@ -4,18 +4,17 @@ import java.io.*;
 import java.util.*;
 
 import org.jetbrains.annotations.NotNull;
-import org.jgrapht.util.FibonacciHeap;
-import org.jgrapht.util.FibonacciHeapNode;
 
 public class MMACSolver {
 
     private final int LAMBDA = 10000;
-    private final int MOVE_MAX_DISTANCE = 10;
+    private final int MAX_MOVE_DISTANCE;
+    private final int DISTANCE_MEMORY = 5;
+    private int moveMaxDistance;
     private ArrayList<ArrayList<Node>> layers;
-    private FibonacciHeap<Edge> edgeFibonacciHeap = new FibonacciHeap<>();
+    private ArrayList<Node> allNodes;
     private Random random = new Random();
     private String instance;
-    //private HashSet<Edge> mostCrossEdges = new HashSet<>();
     private long startTime;
 
     public MMACSolver(String instanceFile) throws IOException {
@@ -30,7 +29,7 @@ public class MMACSolver {
         int edgeNum = Integer.parseInt(data[1]);
         int layerNum = Integer.parseInt(data[2]);
 
-        var allNodes = new ArrayList<Node>(nodeNum);
+        allNodes = new ArrayList<>(nodeNum);
         for (int i = 1; i <= nodeNum; ++i) {
             allNodes.add(new Node(i, -1));
         }
@@ -65,7 +64,12 @@ public class MMACSolver {
         }
 
         br.close();
-        //checkGraph();
+
+        int md = 0;
+        for (ArrayList<Node> layer : layers){
+            if (md < layer.size())md = layer.size();
+        }
+        MAX_MOVE_DISTANCE = md;
     }
 
     public void solve() throws IOException {
@@ -75,19 +79,13 @@ public class MMACSolver {
     }
 
     private void initM() {
-        edgeFibonacciHeap.clear();
-        for (ArrayList<Node> layer : layers) {
-            for (Node n : layer) {
-                for (Edge e : n.outEdges) {
-                    int lam = calcCross(e, layer);
-                    edgeFibonacciHeap.insert(e.fHeapNode, 1.0 / lam);
-                }
+        for (Node n : allNodes) {
+            for (Edge e : n.outEdges) {
+                calcCross(e, layers.get(n.layerID));
             }
         }
-    }
-
-    private int getM(){
-        return edgeFibonacciHeap.min().getData().cross;
+        calcAllNodeMaxCross();
+        allNodes.sort((a, b) -> - Integer.compare(a.maxCross, b.maxCross));
     }
 
     /***
@@ -104,7 +102,7 @@ public class MMACSolver {
                 i > k && j < l;
     }
 
-    private int calcCross(Edge e, ArrayList<Node> layer) {
+    private void calcCross(Edge e, ArrayList<Node> layer) {
         int lam = 0;
         for (Node n : layer) {
             if (n == e.source) continue;
@@ -115,42 +113,13 @@ public class MMACSolver {
             }
         }
         e.cross = lam;
-        return lam;
     }
-
-//    private boolean checkGraph(){
-//        for (ArrayList<Node> layer : layers){
-//            for (Node node : layer){
-//                for(Edge e : node.outEdges){
-//                    Node source = e.source;
-//                    if (source != node){
-//                        throw new Error("checkGraph 1");
-//                    }
-//                    Node sink = e.sink;
-//                    if (!sink.inEdges.contains(e)){
-//                        throw new Error("checkGraph 2");
-//                    }
-//                }
-//                for (Edge e : node.inEdges){
-//                    Node source = e.source;
-//                    Node sink = e.sink;
-//                    if (sink != node){
-//                        throw new Error("checkGraph 3");
-//                    }
-//                    if (!source.outEdges.contains(e)){
-//                        throw new Error("checkGraph 4");
-//                    }
-//                }
-//            }
-//        }
-//        return true;
-//    }
 
     private void init() {
         System.out.println("Initializing...");
         constructSolution();
         initM();
-        System.out.println("Initial obj: "+ edgeFibonacciHeap.min().getData().cross);
+        System.out.println("Initial obj: "+ allNodes.get(0).maxCross);
     }
 
     private void constructSolution(){
@@ -217,17 +186,6 @@ public class MMACSolver {
         return sum / count;
     }
 
-    private int calcD(Node node, HashSet<Node> V){
-        int d = 0;
-        for (Edge e : node.outEdges){
-            if (V.contains(e.sink))++d;
-        }
-        for (Edge e:node.inEdges){
-            if (V.contains(e.source))++d;
-        }
-        return d;
-    }
-
     private ArrayList<Node> getRCL(HashSet<Node> V){
         var RCL = new ArrayList<Node>();
         for (Node node : V){
@@ -246,48 +204,51 @@ public class MMACSolver {
 
         Solution bestSol = new Solution(this, false);
         boolean wFlag = false;
-        var moveDistances = new ArrayList<Integer>();
+        moveMaxDistance = MAX_MOVE_DISTANCE / 4;
+        MvDisManager mvDisManager = new MvDisManager();
         for(;;++iter) {
             Move mv = findMove();
             if (!wFlag && mv.delta.deltaM >= 0){
                 wFlag = true;
                 bestSol = new Solution(this, false);
             }
-            if (mv.delta.deltaCross >=0 && mv.delta.deltaM >=0 )break;
-            moveDistances.add(Math.abs(mv.newPos - mv.node.pos));
+            if (mv.delta.deltaCross >=0 && mv.delta.deltaM >=0 ){
+                if (moveMaxDistance < MAX_MOVE_DISTANCE){
+                    moveMaxDistance = MAX_MOVE_DISTANCE;
+                    mvDisManager.record(moveMaxDistance);
+                    continue;
+                }else{
+                    break;
+                }
+            }
+            mvDisManager.record(Math.abs(mv.newPos - mv.node.pos));
             makeMove(mv);
-            int obj = edgeFibonacciHeap.min().getData().cross;
-            System.out.println("Iteration: " + iter + " Obj:" + obj);
+            int obj = allNodes.get(0).maxCross;
 
+            if (iter % 10 == 0) {
+                System.out.println("Iteration: " + iter + ", Obj:" + obj + ", MvDis: " + moveMaxDistance);
+            }
             if (wFlag && obj < bestSol.M){
                 bestSol = new Solution(this, false);
             }
 
             if (obj == 0) break;
-
+            if (iter >= DISTANCE_MEMORY){
+                moveMaxDistance = mvDisManager.getMax() + 1;
+            }
         }
 
         checkSolution();
-        if (edgeFibonacciHeap.min().getData().cross <= bestSol.M) {
+        if (allNodes.get(0).maxCross <= bestSol.M) {
             new Solution(this, true);
         }
         System.out.println("Iteration: " + iter);
-        System.out.println(edgeFibonacciHeap.min().getData().cross);
-
-        writeMoveDistances(moveDistances);
+        System.out.println(allNodes.get(0).maxCross);
     }
 
-    private void writeMoveDistances(ArrayList<Integer> distances) throws IOException {
-        BufferedWriter bw = new BufferedWriter(new FileWriter("moveDistances.txt"));
-        for (Integer d : distances){
-            bw.write(d + ",");
-        }
-        bw.close();
-    }
 
-    private Delta checkMoveCross(Node n, int newPos){
+    private Delta checkMoveCross(Node n, int newPos, int currM){
 
-        int currM = getM();
         Delta delta = new Delta(0,0);
 
         int lbIndex;
@@ -389,34 +350,57 @@ public class MMACSolver {
     }
 
     private Move findMove() {
+        int currM = allNodes.get(0).maxCross;
         int bestCount = 0;
         Move bestMv = new Move(null, -1, new Delta(Integer.MAX_VALUE, 0));
-        for (ArrayList<Node> layer : layers){
-            for (Node n : layer){
-                for (int i = 0; i < layer.size(); ++i){
-                    if (i == n.pos || i == n.pos - 1 || Math.abs(n.pos - i) > MOVE_MAX_DISTANCE)continue;
-                    Delta delta = checkMoveCross(n, i);
-                    if (delta == null)continue;
-//                    if(delta.deltaM < 0){
-//                        return new Move(n,i,delta);
-//                    }
-                    int cmp = delta.compareTo(bestMv.delta);
-                    if( cmp < 0){
-                        bestMv = new Move(n, i, delta);
-                        bestCount = 1;
-                    }else if(cmp == 0 && random.nextInt(++bestCount) == 0){
-                        bestMv = new Move(n, i, delta);
-                    }
+
+        for (Node n : allNodes) {
+
+            if (n.maxCross < currM && bestMv.delta.deltaM < 0){
+                return bestMv;
+            }
+            if (n.maxCross == 0)break;
+
+            for (int i = 0; i < layers.get(n.layerID).size(); ++i){
+                if (i == n.pos || i == n.pos - 1 || Math.abs(n.pos - i) > moveMaxDistance)continue;
+                Delta delta = checkMoveCross(n, i, currM);
+                if (delta == null)continue;
+                int cmp = delta.compareTo(bestMv.delta);
+                if( cmp < 0){
+                    bestMv = new Move(n, i, delta);
+                    bestCount = 1;
+                }else if(cmp == 0 && random.nextInt(++bestCount) == 0){
+                    bestMv = new Move(n, i, delta);
                 }
             }
         }
         return bestMv;
     }
 
-    private void makeMove(Move mv){
-        System.out.println(mv);
-        ArrayList<Node> layer = layers.get(mv.node.layerID);
 
+
+    private void calcAllNodeMaxCross(){
+        for(Node node : allNodes){
+            calcNodeMaxCross(node);
+        }
+    }
+
+    private void calcNodeMaxCross(Node node){
+        Edge maxOutEdge = node.outEdges.stream().max(Comparator.comparing(a->a.cross)).orElse(null);
+        Edge maxInEdge = node.inEdges.stream().max(Comparator.comparing(a->a.cross)).orElse(null);
+        if (maxOutEdge != null && maxInEdge !=null){
+            node.maxCross = Math.max(maxOutEdge.cross, maxInEdge.cross);
+        }else if(maxInEdge != null){
+            node.maxCross = maxInEdge.cross;
+        }else if (maxOutEdge != null){
+            node.maxCross = maxOutEdge.cross;
+        }else{
+            throw new Error("Isolated Node!");
+        }
+    }
+
+    private void makeMove(Move mv){
+        ArrayList<Node> layer = layers.get(mv.node.layerID);
         int lbIndex;
         int ubIndex;
         if (mv.newPos > mv.node.pos){
@@ -433,7 +417,6 @@ public class MMACSolver {
                 int iO= node.pos;
                 int iN = calcNewPos(mv.node.pos, mv.newPos, node.pos);
                 int j = e.sink.pos;
-                int deltaCross = 0;
                 for (int indexP = lbIndex; indexP<=ubIndex; ++indexP){
                     Node nodeP = layer.get(indexP);
                     if (nodeP == node)continue;
@@ -442,11 +425,10 @@ public class MMACSolver {
                         int kN = calcNewPos(mv.node.pos, mv.newPos, nodeP.pos);
                         int l = eP.sink.pos;
                         if (j==l)continue;
-                        deltaCross += (isCross(iN,j,kN,l) ? 1 : 0)
+                        e.cross += (isCross(iN,j,kN,l) ? 1 : 0)
                                 - (isCross(iO, j, kO, l) ? 1 : 0);
                     }
                 }
-                updateEdgeCross(e, e.cross + deltaCross);
             }
         }
 
@@ -456,7 +438,6 @@ public class MMACSolver {
                 int i = e.source.pos;
                 int jO = node.pos;
                 int jN = calcNewPos(mv.node.pos, mv.newPos, node.pos);
-                int deltaCross = 0;
                 for(int indexP = lbIndex; indexP<=ubIndex; ++indexP){
                     Node nodeP = layer.get(indexP);
                     if (nodeP == node) continue;
@@ -465,11 +446,10 @@ public class MMACSolver {
                         if (k == i)continue;
                         int lO = nodeP.pos;
                         int lN = calcNewPos(mv.node.pos, mv.newPos, nodeP.pos);
-                        deltaCross += (isCross(i,jN,k,lN) ? 1 : 0)
+                        e.cross += (isCross(i,jN,k,lN) ? 1 : 0)
                         -(isCross(i, jO, k, lO) ? 1 : 0);
                     }
                 }
-                updateEdgeCross(e, e.cross + deltaCross);
             }
         }
 
@@ -487,22 +467,35 @@ public class MMACSolver {
         }
         layer.set(mv.newPos, mv.node);
         mv.node.pos = mv.newPos;
+
+        recalcNodeMaxCross(layer, lbIndex, ubIndex);
+        allNodes.sort((a, b) -> - Integer.compare(a.maxCross, b.maxCross));
     }
 
-    private void updateEdgeCross(Edge e, int newCross){
-        if(e.cross == newCross)return;
-        if (newCross < e.cross){
-            //System.out.println("update edge " + e + " D oriCross: " + e.cross + " newCross:" + newCross);
-            edgeFibonacciHeap.delete(e.fHeapNode);
-            edgeFibonacciHeap.insert(e.fHeapNode, 1.0/newCross);
-        }else{
-            //System.out.println("update edge " + e + " U oriCross: " + e.cross + " newCross:" + newCross);
-            edgeFibonacciHeap.decreaseKey(e.fHeapNode, 1.0/newCross);
+    private void recalcNodeMaxCross(ArrayList<Node> layer, int lbIndex, int ubIndex){
+        var recalcedNode = new HashSet<Node>();
+        for (int i = lbIndex; i<=ubIndex; ++i){
+            Node node = layer.get(i);
+            calcNodeMaxCross(node);
+
+            for (Edge e : node.outEdges){
+                Node nodeP = e.sink;
+                if (recalcedNode.contains(nodeP))continue;
+                calcNodeMaxCross(nodeP);
+                recalcedNode.add(nodeP);
+            }
+
+            for (Edge e : node.inEdges){
+                Node nodeP = e.source;
+                if (recalcedNode.contains(nodeP))continue;
+                calcNodeMaxCross(nodeP);
+                recalcedNode.add(nodeP);
+            }
         }
-        e.cross = newCross;
     }
 
-    private void checkSolution(){
+    private void checkSolution() {
+        checkAllNodesOrder();
         int M = 0;
         for (ArrayList<Node> layer : layers){
             for (Node node : layer){
@@ -523,7 +516,7 @@ public class MMACSolver {
                         System.err.println("Edge: " + e + " currCross: " + currCross + ", e.cross: " + e.cross);
                         throw new Error("Cross error!");
                     }
-                    if (Double.compare(1.0/e.cross, e.fHeapNode.getKey()) != 0){
+                    if (e.cross > e.source.maxCross || e.cross > e.sink.maxCross){
                         throw new Error("Cross consistency error!");
                     }
 
@@ -533,13 +526,19 @@ public class MMACSolver {
                 }
             }
         }
-        if (edgeFibonacciHeap.min().getData().cross != M){
-            throw new Error("FibonacciHeap error!");
+        if(allNodes.get(0).maxCross != M){
+            throw new Error("allNodes cross record error!");
         }
     }
-
+    private void checkAllNodesOrder(){
+        for (int i=0; i<allNodes.size() - 1; ++i){
+            if (allNodes.get(i).maxCross < allNodes.get(i+1).maxCross){
+                throw new Error("Nodes order error!");
+            }
+        }
+    }
     private class MvDisManager{
-        private int[] lastDis = new int[10];
+        private int[] lastDis = new int[DISTANCE_MEMORY];
         private int pos = 0;
 
         void record(int dis){
@@ -561,6 +560,9 @@ public class MMACSolver {
         int ID;
         int layerID;
         int pos;
+
+        int maxCross = 0;
+
         ArrayList<Edge> outEdges = new ArrayList<>();
         ArrayList<Edge> inEdges = new ArrayList<>();
 
@@ -591,12 +593,10 @@ public class MMACSolver {
 
         int cross = 0;
 
-        FibonacciHeapNode<Edge> fHeapNode;
 
         Edge(Node src, Node snk) {
             source = src;
             sink = snk;
-            fHeapNode = new FibonacciHeapNode<>(this);
         }
 
         @Override
@@ -641,7 +641,7 @@ public class MMACSolver {
         Solution(MMACSolver solver, boolean isFinal) throws IOException {
             solver.checkSolution();
             instance = solver.instance;
-            M = solver.edgeFibonacciHeap.min().getData().cross;
+            M = allNodes.get(0).maxCross;
             sol = new ArrayList<>(solver.layers.size());
             for (ArrayList<Node> layer : solver.layers){
                 ArrayList<Integer> nodeIndexes = new ArrayList<>(layer.size());
