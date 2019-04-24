@@ -120,9 +120,20 @@ public class MMACSolver {
 
     private void init() {
         System.out.println("Initializing...");
-        constructSolution();
+        //constructSolution();
+        randomConstruction();
         initM();
         System.out.println("Initial obj: "+ allNodes.get(0).maxCross);
+    }
+
+    private void randomConstruction(){
+        for (ArrayList<Node> layer : layers){
+            Collections.shuffle(layer, random);
+
+            for (int i=0; i<layer.size(); ++i){
+                layer.get(i).pos = i;
+            }
+        }
     }
 
     private void constructSolution(){
@@ -207,7 +218,7 @@ public class MMACSolver {
 
         bestSol = new Solution(this, false);
         boolean wFlag = false;
-        moveMaxDistance = MAX_MOVE_DISTANCE / 4;
+        moveMaxDistance = MAX_MOVE_DISTANCE / 2;
         MvDisManager mvDisManager = new MvDisManager();
         for(;;++iter) {
             Move mv = findMove();
@@ -217,20 +228,21 @@ public class MMACSolver {
             }
 
             if (mv.delta.deltaM >= 0){
-                if (mv.delta.deltaCross < 0 && moveMaxDistance < MAX_MOVE_DISTANCE / 2) {
-                    moveMaxDistance = MAX_MOVE_DISTANCE / 2;
-                    mvDisManager.record(moveMaxDistance);
-                    continue;
-                }else if(mv.delta.deltaCross >= 0 && moveMaxDistance < MAX_MOVE_DISTANCE){
-                    moveMaxDistance = MAX_MOVE_DISTANCE;
-                    mvDisManager.record(moveMaxDistance);
-                    continue;
-                }else if (mv.delta.deltaCross >= 0){
-                    break;
-                }
+                break;
             }
 
-            mvDisManager.record(Math.abs(mv.newPos - mv.node.pos));
+//            if (mv.delta.deltaCross >=0 && mv.delta.deltaM >=0 ){
+//                if (moveMaxDistance < MAX_MOVE_DISTANCE){
+//                    moveMaxDistance = MAX_MOVE_DISTANCE;
+//                    mvDisManager.record(moveMaxDistance);
+//                    continue;
+//                }else{
+//                    break;
+//                }
+//            }
+
+            //mvDisManager.record(Math.abs(mv.newPos - mv.node.pos));
+//            System.out.println(mv);
             makeMove(mv);
             int obj = allNodes.get(0).maxCross;
 
@@ -242,13 +254,15 @@ public class MMACSolver {
             }
 
             if (obj == 0) break;
-            if (iter >= DISTANCE_MEMORY && moveMaxDistance < MAX_MOVE_DISTANCE){
-                moveMaxDistance = mvDisManager.getMax() + 1;
-            }
+//            if (iter >= DISTANCE_MEMORY){
+//                int newDis = mvDisManager.getMax() + 1;
+//                moveMaxDistance = newDis < MAX_MOVE_DISTANCE ? newDis : MAX_MOVE_DISTANCE;
+//
+//            }
         }
 
         if (allNodes.get(0).maxCross <= bestSol.M) {
-            new Solution(this, true);
+            bestSol = new Solution(this, true);
         }
         System.out.println("Iteration: " + iter);
         System.out.println(allNodes.get(0).maxCross);
@@ -266,6 +280,15 @@ public class MMACSolver {
         }
     }
 
+
+    /***
+     *
+     *  check the delta when change node to to newPos
+     * @param n
+     * @param newPos
+     * @param currM
+     * @return
+     */
     private Delta checkMoveCross(Node n, int newPos, int currM){
         int lbIndex;
         int ubIndex;
@@ -333,9 +356,15 @@ public class MMACSolver {
             Node node = layer.get(index);
             for (Edge e : node.outEdges){
                 updateDelta(delta, e.tmpDeltaCross, e.cross, currM);
+                if (delta.deltaM > LAMBDA / 2){
+                    return null;
+                }
             }
             for (Edge e : node.inEdges){
                 updateDelta(delta, e.tmpDeltaCross, e.cross, currM);
+                if (delta.deltaM > LAMBDA / 2){
+                    return null;
+                }
             }
         }
         return delta;
@@ -385,11 +414,11 @@ public class MMACSolver {
         Move bestMv = new Move(null, -1, new Delta(Integer.MAX_VALUE, 0));
 
         for (Node n : allNodes) {
-
             if (n.maxCross < currM && bestMv.delta.deltaM < 0){
                 return bestMv;
             }
-            if (n.maxCross == 0)break;
+//            if (n.maxCross == 0)break;
+            if (n.maxCross < currM)break;
             int lbIndex = Math.max(0, n.pos - moveMaxDistance);
             int ubIndex = Math.min(n.pos + moveMaxDistance, layers.get(n.layerID).size() - 1);
             for (int i = lbIndex; i <=ubIndex; ++i){
