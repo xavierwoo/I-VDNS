@@ -12,15 +12,15 @@ public class Main {
 
         ArrayList<String> instances = new ArrayList<>();
 
-        for (int i=8; i<=8; ++i){
-            for (int j = 4; j<=10; ++j){
+        for (int i=3; i<=8; ++i){
+            for (int j = 1; j<=10; ++j){
                 String instance = "noug" + i + "-rnd-" + String.format("%1$03d",j) + ".txt";
                 instances.add(instance);
             }
         }
 
-        instances.clear();
-        instances.add("noug8-rnd-010.txt");
+//        instances.clear();
+//        instances.add("test.txt");
 
         System.out.println(instances);
 
@@ -29,7 +29,7 @@ public class Main {
             ArrayList<Integer> objs = new ArrayList<>();
             ArrayList<Double> times = new ArrayList<>();
 
-            for (int i = 0; i < 500; ++i) {
+            for (int i = 0; i < 50; ++i) {
                 MMACSolver solver = new MMACSolver("instances/" + instance, i);
                 solver.solve();
                 int obj = solver.getObj();
@@ -38,7 +38,7 @@ public class Main {
                 times.add(time);
             }
             System.out.println(objs);
-//            System.out.println(objs.stream().min(Integer::compareTo).get());
+            System.out.println(objs.stream().min(Integer::compareTo).get());
             System.out.println(times);
 
 
@@ -47,6 +47,8 @@ public class Main {
             bf.write(instance);
             bf.write(",");
             bf.write(String.valueOf(objs.stream().min(Integer::compareTo).get()));
+            bf.write(",");
+            bf.write(String.valueOf(times.stream().max(Double::compareTo).get()));
             bf.write("\n");
             bf.close();
         }

@@ -3,8 +3,6 @@ package mmac;
 import java.io.*;
 import java.util.*;
 
-import org.jetbrains.annotations.NotNull;
-
 public class MMACSolver {
 
     private final int LAMBDA = 10000;
@@ -20,7 +18,7 @@ public class MMACSolver {
     Solution bestSol;
 
     public MMACSolver(String instanceFile, int seed) throws IOException {
-        random = seed >= 0? new Random(seed) : new Random();
+        random = seed >= 0 ? new Random(seed) : new Random();
         instance = instanceFile;
         BufferedReader br = new BufferedReader(new FileReader(instanceFile));
 
@@ -69,8 +67,8 @@ public class MMACSolver {
         br.close();
 
         int md = 0;
-        for (ArrayList<Node> layer : layers){
-            if (md < layer.size())md = layer.size();
+        for (ArrayList<Node> layer : layers) {
+            if (md < layer.size()) md = layer.size();
         }
         MAX_MOVE_DISTANCE = md;
     }
@@ -88,7 +86,7 @@ public class MMACSolver {
             }
         }
         calcAllNodeMaxCross();
-        allNodes.sort((a, b) -> - Integer.compare(a.maxCross, b.maxCross));
+        allNodes.sort((a, b) -> -Integer.compare(a.maxCross, b.maxCross));
     }
 
     /***
@@ -120,26 +118,26 @@ public class MMACSolver {
 
     private void init() {
         System.out.println("Initializing...");
-        //constructSolution();
-        randomConstruction();
+        constructSolution();
+        //randomConstruction();
         initM();
-        System.out.println("Initial obj: "+ allNodes.get(0).maxCross);
+        System.out.println("Initial obj: " + allNodes.get(0).maxCross);
     }
 
-    private void randomConstruction(){
-        for (ArrayList<Node> layer : layers){
+    private void randomConstruction() {
+        for (ArrayList<Node> layer : layers) {
             Collections.shuffle(layer, random);
 
-            for (int i=0; i<layer.size(); ++i){
+            for (int i = 0; i < layer.size(); ++i) {
                 layer.get(i).pos = i;
             }
         }
     }
 
-    private void constructSolution(){
+    private void constructSolution() {
         var CL = new HashSet<Node>();
         var V = new HashSet<Node>();
-        for (ArrayList<Node> layer : layers){
+        for (ArrayList<Node> layer : layers) {
             CL.addAll(layer);
         }
 
@@ -150,7 +148,7 @@ public class MMACSolver {
         CL.remove(vStar);
         V.add(vStar);
 
-        while(!CL.isEmpty()){
+        while (!CL.isEmpty()) {
             ArrayList<Node> RCL = getRCL(V);
             vStar = RCL.get(random.nextInt(RCL.size()));
             int bc = calcBC(vStar, V);
@@ -160,39 +158,39 @@ public class MMACSolver {
             V.add(vStar);
         }
 
-        for (ArrayList<Node> layer : layers){
-            layer.sort(Comparator.comparing(a->a.pos));
-            for (int i=0; i<layer.size(); ++i){
+        for (ArrayList<Node> layer : layers) {
+            layer.sort(Comparator.comparing(a -> a.pos));
+            for (int i = 0; i < layer.size(); ++i) {
                 layer.get(i).pos = i;
             }
         }
     }
 
-    private int findBCNearst(ArrayList<Node> layer, int bc, HashSet<Node> V){
+    private int findBCNearst(ArrayList<Node> layer, int bc, HashSet<Node> V) {
         var usedPos = new HashSet<Integer>();
-        for (Node node : layer){
-            if (V.contains(node)){
+        for (Node node : layer) {
+            if (V.contains(node)) {
                 usedPos.add(node.pos);
             }
         }
         if (!usedPos.contains(bc)) return bc;
-        for (int i=1; ;++i){
-            if (!usedPos.contains(bc + i)) return bc +i;
-            if (!usedPos.contains(bc-i)) return bc - i;
+        for (int i = 1; ; ++i) {
+            if (!usedPos.contains(bc + i)) return bc + i;
+            if (!usedPos.contains(bc - i)) return bc - i;
         }
     }
 
-    private int calcBC(Node vStar, HashSet<Node> V){
+    private int calcBC(Node vStar, HashSet<Node> V) {
         int count = 0;
         int sum = 0;
-        for (Edge e : vStar.outEdges){
-            if (V.contains(e.sink)){
+        for (Edge e : vStar.outEdges) {
+            if (V.contains(e.sink)) {
                 ++count;
                 sum += e.sink.pos;
             }
         }
-        for (Edge e : vStar.inEdges){
-            if (V.contains(e.source)){
+        for (Edge e : vStar.inEdges) {
+            if (V.contains(e.source)) {
                 ++count;
                 sum += e.source.pos;
             }
@@ -200,13 +198,13 @@ public class MMACSolver {
         return sum / count;
     }
 
-    private ArrayList<Node> getRCL(HashSet<Node> V){
+    private ArrayList<Node> getRCL(HashSet<Node> V) {
         var RCL = new ArrayList<Node>();
-        for (Node node : V){
-            for (Edge e : node.outEdges){
+        for (Node node : V) {
+            for (Edge e : node.outEdges) {
                 RCL.add(e.sink);
             }
-            for (Edge e : node.inEdges){
+            for (Edge e : node.inEdges) {
                 RCL.add(e.source);
             }
         }
@@ -219,46 +217,28 @@ public class MMACSolver {
         bestSol = new Solution(this, false);
         boolean wFlag = false;
         moveMaxDistance = MAX_MOVE_DISTANCE / 2;
-        MvDisManager mvDisManager = new MvDisManager();
-        for(;;++iter) {
+        for (; ; ++iter) {
             Move mv = findMove();
-            if (!wFlag && mv.delta.deltaM >= 0){
+            if (!wFlag && mv.delta >= 0) {
                 wFlag = true;
                 bestSol = new Solution(this, false);
             }
 
-            if (mv.delta.deltaM >= 0){
+            if (mv.delta >= 0) {
                 break;
             }
 
-//            if (mv.delta.deltaCross >=0 && mv.delta.deltaM >=0 ){
-//                if (moveMaxDistance < MAX_MOVE_DISTANCE){
-//                    moveMaxDistance = MAX_MOVE_DISTANCE;
-//                    mvDisManager.record(moveMaxDistance);
-//                    continue;
-//                }else{
-//                    break;
-//                }
-//            }
-
-            //mvDisManager.record(Math.abs(mv.newPos - mv.node.pos));
-//            System.out.println(mv);
             makeMove(mv);
             int obj = allNodes.get(0).maxCross;
 
             if (iter % 10 == 0) {
                 System.out.println("Iteration: " + iter + ", Obj:" + obj + ", MvDis: " + moveMaxDistance);
             }
-            if (wFlag && obj < bestSol.M){
+            if (wFlag && obj < bestSol.M) {
                 bestSol = new Solution(this, false);
             }
 
             if (obj == 0) break;
-//            if (iter >= DISTANCE_MEMORY){
-//                int newDis = mvDisManager.getMax() + 1;
-//                moveMaxDistance = newDis < MAX_MOVE_DISTANCE ? newDis : MAX_MOVE_DISTANCE;
-//
-//            }
         }
 
         if (allNodes.get(0).maxCross <= bestSol.M) {
@@ -268,223 +248,81 @@ public class MMACSolver {
         System.out.println(allNodes.get(0).maxCross);
     }
 
-    private void eraseEdgeTMPDeltaCross(ArrayList<Node> layer, int lbIndex, int ubIndex){
-        for(int index = lbIndex; index <= ubIndex; ++index){
-            Node node = layer.get(index);
-            for (Edge e : node.outEdges){
-                e.tmpDeltaCross = 0;
-            }
-            for (Edge e : node.inEdges){
-                e.tmpDeltaCross = 0;
-            }
-        }
-    }
 
-
-    /***
-     *
-     *  check the delta when change node to to newPos
-     * @param n
-     * @param newPos
-     * @param currM
-     * @return
-     */
-    private Delta checkMoveCross(Node n, int newPos, int currM){
-        int lbIndex;
-        int ubIndex;
-        if (n.pos < newPos){
-            lbIndex = n.pos;
-            ubIndex = newPos;
-        }else{
-            lbIndex = newPos;
-            ubIndex = n.pos;
-        }
-
-        ArrayList<Node> layer = layers.get(n.layerID);
-
-        eraseEdgeTMPDeltaCross(layer, lbIndex, ubIndex);
-
-        for(int index = lbIndex; index<ubIndex; ++index){
-            Node node = layer.get(index);
-            for (Edge e : node.outEdges){
-                int iO = node.pos;
-                int iN = calcNewPos(n.pos, newPos, node.pos);
-                int j = e.sink.pos;
-                for (int indexP = index + 1; indexP<=ubIndex; ++indexP){
-                    Node nodeP = layer.get(indexP);
-                    for (Edge eP : nodeP.outEdges){
-                        int kO = nodeP.pos;
-                        int kN = calcNewPos(n.pos, newPos, nodeP.pos);
-                        int l = eP.sink.pos;
-                        if (j == l)continue;
-                        int deltaCross = (isCross(iN,j,kN,l) ? 1 : 0)
-                            - (isCross(iO, j, kO, l) ? 1 : 0);
-                        e.tmpDeltaCross += deltaCross;
-                        eP.tmpDeltaCross += deltaCross;
-                    }
-                }
-            }
-        }
-
-        for(int index = lbIndex; index<ubIndex; ++index){
-            Node node = layer.get(index);
-            for (Edge e : node.inEdges){
-                int i = e.source.pos;
-                int jO = node.pos;
-                int jN = calcNewPos(n.pos, newPos, e.sink.pos);
-                for (int  indexP = index+1; indexP<=ubIndex; ++indexP){
-                    Node nodeP = layer.get(indexP);
-                    for (Edge eP : nodeP.inEdges){
-                        int k = eP.source.pos;
-                        if (k == i)continue;
-                        int lO = nodeP.pos;
-                        int lN = calcNewPos(n.pos, newPos, eP.sink.pos);
-                        int deltaCross = (isCross(i,jN,k,lN) ? 1 : 0)
-                            -(isCross(i, jO, k, lO) ? 1 : 0);
-                        e.tmpDeltaCross += deltaCross;
-                        eP.tmpDeltaCross += deltaCross;
-                    }
-                }
-            }
-        }
-        return countDelta(layer, lbIndex, ubIndex, currM);
-    }
-
-    private Delta countDelta(ArrayList<Node> layer, int lbIndex, int ubIndex, int currM){
-        Delta delta = new Delta(0,0);
-        for (int index = lbIndex; index <= ubIndex; ++index){
-            Node node = layer.get(index);
-            for (Edge e : node.outEdges){
-                updateDelta(delta, e.tmpDeltaCross, e.cross, currM);
-                if (delta.deltaM > LAMBDA / 2){
-                    return null;
-                }
-            }
-            for (Edge e : node.inEdges){
-                updateDelta(delta, e.tmpDeltaCross, e.cross, currM);
-                if (delta.deltaM > LAMBDA / 2){
-                    return null;
-                }
-            }
-        }
-        return delta;
-    }
-
-    public int getObj(){
+    public int getObj() {
         return bestSol.M;
     }
 
-    public double getTime(){
+    public double getTime() {
         return bestSol.time;
     }
 
-    private void updateDelta(Delta delta, int deltaCross, int oriCross, int M){
-        delta.deltaCross += deltaCross;
-        int newCross = oriCross + deltaCross;
-        if (oriCross < M && newCross == M) {
-            delta.deltaM += 1;
-        }else if (oriCross <= M && newCross > M){
-            delta.deltaM += LAMBDA * (newCross - M);
-        }else if (oriCross == M && newCross < M){
-            delta.deltaM -= 1;
-        }
-    }
 
-    private int calcNewPos(int mvNodePos, int mvNodeNewPos, int pos){
-        if (mvNodePos == pos){
+    private int calcNewPos(int mvNodePos, int mvNodeNewPos, int pos) {
+        if (mvNodePos == pos) {
             return mvNodeNewPos;
-        }else if (mvNodePos < mvNodeNewPos){
-            if (pos < mvNodePos || pos > mvNodeNewPos){
+        } else if (mvNodePos < mvNodeNewPos) {
+            if (pos < mvNodePos || pos > mvNodeNewPos) {
                 return pos;
-            }else{
+            } else {
                 return pos - 1;
             }
-        }else{
-            if (pos < mvNodeNewPos || pos > mvNodePos){
+        } else {
+            if (pos < mvNodeNewPos || pos > mvNodePos) {
                 return pos;
-            }else{
+            } else {
                 return pos + 1;
             }
         }
     }
 
-    private Move findMove() {
-        int currM = allNodes.get(0).maxCross;
-        int bestCount = 0;
-        Move bestMv = new Move(null, -1, new Delta(Integer.MAX_VALUE, 0));
 
-        for (Node n : allNodes) {
-            if (n.maxCross < currM && bestMv.delta.deltaM < 0){
-                return bestMv;
-            }
-//            if (n.maxCross == 0)break;
-            if (n.maxCross < currM)break;
-            int lbIndex = Math.max(0, n.pos - moveMaxDistance);
-            int ubIndex = Math.min(n.pos + moveMaxDistance, layers.get(n.layerID).size() - 1);
-            for (int i = lbIndex; i <=ubIndex; ++i){
-                if (i == n.pos)continue;
-                Delta delta = checkMoveCross(n, i, currM);
-                if (delta == null)continue;
-                int cmp = delta.compareTo(bestMv.delta);
-                if( cmp < 0){
-                    bestMv = new Move(n, i, delta);
-                    bestCount = 1;
-                }else if(cmp == 0 && random.nextInt(++bestCount) == 0){
-                    bestMv = new Move(n, i, delta);
-                }
-            }
-        }
-        return bestMv;
-    }
-
-
-
-    private void calcAllNodeMaxCross(){
-        for(Node node : allNodes){
+    private void calcAllNodeMaxCross() {
+        for (Node node : allNodes) {
             calcNodeMaxCross(node);
         }
     }
 
-    private void calcNodeMaxCross(Node node){
-        Edge maxOutEdge = node.outEdges.stream().max(Comparator.comparing(a->a.cross)).orElse(null);
-        Edge maxInEdge = node.inEdges.stream().max(Comparator.comparing(a->a.cross)).orElse(null);
-        if (maxOutEdge != null && maxInEdge !=null){
+    private void calcNodeMaxCross(Node node) {
+        Edge maxOutEdge = node.outEdges.stream().max(Comparator.comparing(a -> a.cross)).orElse(null);
+        Edge maxInEdge = node.inEdges.stream().max(Comparator.comparing(a -> a.cross)).orElse(null);
+        if (maxOutEdge != null && maxInEdge != null) {
             node.maxCross = Math.max(maxOutEdge.cross, maxInEdge.cross);
-        }else if(maxInEdge != null){
+        } else if (maxInEdge != null) {
             node.maxCross = maxInEdge.cross;
-        }else if (maxOutEdge != null){
+        } else if (maxOutEdge != null) {
             node.maxCross = maxOutEdge.cross;
-        }else{
+        } else {
             throw new Error("Isolated Node!");
         }
     }
 
-    private void makeMove(Move mv){
+    private void makeMove(Move mv) {
         ArrayList<Node> layer = layers.get(mv.node.layerID);
         int lbIndex;
         int ubIndex;
-        if (mv.newPos > mv.node.pos){
+        if (mv.newPos > mv.node.pos) {
             lbIndex = mv.node.pos;
             ubIndex = mv.newPos;
-        }else{
+        } else {
             lbIndex = mv.newPos;
             ubIndex = mv.node.pos;
         }
 
-        for(int index = lbIndex; index<ubIndex; ++index){
+        for (int index = lbIndex; index < ubIndex; ++index) {
             Node node = layer.get(index);
-            for (Edge e : node.outEdges){
-                int iO= node.pos;
+            for (Edge e : node.outEdges) {
+                int iO = node.pos;
                 int iN = calcNewPos(mv.node.pos, mv.newPos, node.pos);
                 int j = e.sink.pos;
-                for (int indexP = index + 1; indexP<=ubIndex; ++indexP){
+                for (int indexP = index + 1; indexP <= ubIndex; ++indexP) {
                     Node nodeP = layer.get(indexP);
-                    for (Edge eP :nodeP.outEdges){
+                    for (Edge eP : nodeP.outEdges) {
                         int kO = nodeP.pos;
                         int kN = calcNewPos(mv.node.pos, mv.newPos, nodeP.pos);
                         int l = eP.sink.pos;
-                        if (j==l)continue;
-                        int delta = (isCross(iN,j,kN,l) ? 1 : 0)
+                        if (j == l) continue;
+                        int delta = (isCross(iN, j, kN, l) ? 1 : 0)
                                 - (isCross(iO, j, kO, l) ? 1 : 0);
                         e.cross += delta;
                         eP.cross += delta;
@@ -493,21 +331,21 @@ public class MMACSolver {
             }
         }
 
-        for(int index = lbIndex; index<ubIndex; ++index){
+        for (int index = lbIndex; index < ubIndex; ++index) {
             Node node = layer.get(index);
-            for (Edge e : node.inEdges){
+            for (Edge e : node.inEdges) {
                 int i = e.source.pos;
                 int jO = node.pos;
                 int jN = calcNewPos(mv.node.pos, mv.newPos, node.pos);
-                for(int indexP = index+1; indexP<=ubIndex; ++indexP){
+                for (int indexP = index + 1; indexP <= ubIndex; ++indexP) {
                     Node nodeP = layer.get(indexP);
-                    for (Edge eP : nodeP.inEdges){
+                    for (Edge eP : nodeP.inEdges) {
                         int k = eP.source.pos;
-                        if (k == i)continue;
+                        if (k == i) continue;
                         int lO = nodeP.pos;
                         int lN = calcNewPos(mv.node.pos, mv.newPos, nodeP.pos);
-                        int delta = (isCross(i,jN,k,lN) ? 1 : 0)
-                            -(isCross(i, jO, k, lO) ? 1 : 0);
+                        int delta = (isCross(i, jN, k, lN) ? 1 : 0)
+                                - (isCross(i, jO, k, lO) ? 1 : 0);
                         e.cross += delta;
                         eP.cross += delta;
                     }
@@ -516,14 +354,14 @@ public class MMACSolver {
         }
 
         //resort nodes in layer
-        if (mv.newPos > mv.node.pos){
-            for(int i = mv.node.pos; i < mv.newPos; ++i){
-                layer.set(i, layer.get(i+1));
+        if (mv.newPos > mv.node.pos) {
+            for (int i = mv.node.pos; i < mv.newPos; ++i) {
+                layer.set(i, layer.get(i + 1));
                 layer.get(i).pos -= 1;
             }
-        }else{
-            for(int i = mv.node.pos; i >mv.newPos; --i){
-                layer.set(i, layer.get(i-1));
+        } else {
+            for (int i = mv.node.pos; i > mv.newPos; --i) {
+                layer.set(i, layer.get(i - 1));
                 layer.get(i).pos += 1;
             }
         }
@@ -531,25 +369,25 @@ public class MMACSolver {
         mv.node.pos = mv.newPos;
 
         recalcNodeMaxCross(layer, lbIndex, ubIndex);
-        allNodes.sort((a, b) -> - Integer.compare(a.maxCross, b.maxCross));
+        allNodes.sort((a, b) -> -Integer.compare(a.maxCross, b.maxCross));
     }
 
-    private void recalcNodeMaxCross(ArrayList<Node> layer, int lbIndex, int ubIndex){
+    private void recalcNodeMaxCross(ArrayList<Node> layer, int lbIndex, int ubIndex) {
         var recalcedNode = new HashSet<Node>();
-        for (int i = lbIndex; i<=ubIndex; ++i){
+        for (int i = lbIndex; i <= ubIndex; ++i) {
             Node node = layer.get(i);
             calcNodeMaxCross(node);
 
-            for (Edge e : node.outEdges){
+            for (Edge e : node.outEdges) {
                 Node nodeP = e.sink;
-                if (recalcedNode.contains(nodeP))continue;
+                if (recalcedNode.contains(nodeP)) continue;
                 calcNodeMaxCross(nodeP);
                 recalcedNode.add(nodeP);
             }
 
-            for (Edge e : node.inEdges){
+            for (Edge e : node.inEdges) {
                 Node nodeP = e.source;
-                if (recalcedNode.contains(nodeP))continue;
+                if (recalcedNode.contains(nodeP)) continue;
                 calcNodeMaxCross(nodeP);
                 recalcedNode.add(nodeP);
             }
@@ -559,59 +397,220 @@ public class MMACSolver {
     private void checkSolution() {
         checkAllNodesOrder();
         int M = 0;
-        for (ArrayList<Node> layer : layers){
-            for (Node node : layer){
-                for (Edge e : node.outEdges){
-                    int i=e.source.pos;
+        for (ArrayList<Node> layer : layers) {
+            for (Node node : layer) {
+                for (Edge e : node.outEdges) {
+                    int i = e.source.pos;
                     int j = e.sink.pos;
                     int currCross = 0;
-                    for(Node nodeP : layer){
-                        if (nodeP == node)continue;
-                        for (Edge eP : nodeP.outEdges){
+                    for (Node nodeP : layer) {
+                        if (nodeP == node) continue;
+                        for (Edge eP : nodeP.outEdges) {
                             int k = eP.source.pos;
                             int l = eP.sink.pos;
-                            if(j == l)continue;
-                            currCross += isCross(i,j,k,l) ? 1 : 0;
+                            if (j == l) continue;
+                            currCross += isCross(i, j, k, l) ? 1 : 0;
                         }
                     }
-                    if (currCross != e.cross){
+                    if (currCross != e.cross) {
                         System.err.println("Edge: " + e + " currCross: " + currCross + ", e.cross: " + e.cross);
                         throw new Error("Cross error!");
                     }
-                    if (e.cross > e.source.maxCross || e.cross > e.sink.maxCross){
+                    if (e.cross > e.source.maxCross || e.cross > e.sink.maxCross) {
                         throw new Error("Cross consistency error!");
                     }
 
-                    if (M < currCross){
+                    if (M < currCross) {
                         M = currCross;
                     }
                 }
             }
         }
-        if(allNodes.get(0).maxCross != M){
+        if (allNodes.get(0).maxCross != M) {
             throw new Error("allNodes cross record error!");
         }
     }
-    private void checkAllNodesOrder(){
-        for (int i=0; i<allNodes.size() - 1; ++i){
-            if (allNodes.get(i).maxCross < allNodes.get(i+1).maxCross){
+
+    private void checkAllNodesOrder() {
+        for (int i = 0; i < allNodes.size() - 1; ++i) {
+            if (allNodes.get(i).maxCross < allNodes.get(i + 1).maxCross) {
                 throw new Error("Nodes order error!");
             }
         }
     }
-    private class MvDisManager{
+
+    private Move findMove() {
+        int currM = allNodes.get(0).maxCross;
+        Move bestMv = new Move(null, -1, Integer.MAX_VALUE);
+
+        for (Node n : allNodes) {
+            if (bestMv.delta < 0) {
+                break;
+            }
+            int lbIndex = Math.max(0, n.pos - moveMaxDistance);
+            int ubIndex = Math.min(n.pos + moveMaxDistance, layers.get(n.layerID).size() - 1);
+
+            Move move = tryMoveNeg(n, lbIndex, currM);
+            if(move.delta < bestMv.delta){
+                bestMv = move;
+            }
+            move = tryMovePos(n, ubIndex, currM);
+            if(move.delta < bestMv.delta){
+                bestMv = move;
+            }
+
+        }
+        return bestMv;
+    }
+
+    private Move tryMoveNeg(Node node, int lbIndex, int currM){
+        Move bestMove = new Move(null, -1, Integer.MAX_VALUE);
+        ArrayList<Node> layer = layers.get(node.layerID);
+        resetTmpCross(layer, lbIndex, node.pos);
+
+        int delta = 0;
+        int nodeOldPos = node.pos;
+        for(int newIndex = node.pos - 1; newIndex >= lbIndex; --newIndex){
+            Node prevNode = layer.get(newIndex);
+
+            delta += calcSwapDelta(prevNode, node, prevNode.pos, prevNode.pos + 1, nodeOldPos, prevNode.pos, currM);
+            if(delta < bestMove.delta){
+                bestMove = new Move(node, newIndex, delta);
+            }
+            updateTmpCross(node);
+            updateTmpCross(prevNode);
+            nodeOldPos = newIndex;
+        }
+
+        return bestMove;
+    }
+
+
+    private Move tryMovePos(Node node, int ubIndex, int currM) {
+        Move bestMove = new Move(null, -1, Integer.MAX_VALUE);
+        ArrayList<Node> layer = layers.get(node.layerID);
+        resetTmpCross(layer, node.pos, ubIndex);
+
+        int delta = 0;
+        int nodeOldPos = node.pos;
+        for (int newIndex = node.pos + 1; newIndex <= ubIndex; ++newIndex) {
+            Node nextNode = layer.get(newIndex);
+
+            delta += calcSwapDelta(node, nextNode, nodeOldPos, newIndex, nextNode.pos, nextNode.pos - 1, currM);
+            if(delta < bestMove.delta){
+                bestMove = new Move(node, newIndex, delta);
+            }
+            updateTmpCross(node);
+            updateTmpCross(nextNode);
+            nodeOldPos = newIndex;
+        }
+        return bestMove;
+    }
+
+    private void clearTmpDeltaCross(Node n){
+        for(Edge e: n.inEdges){
+            e.tmpDeltaCross = 0;
+        }
+        for(Edge e: n.outEdges){
+            e.tmpDeltaCross = 0;
+        }
+    }
+
+    private int calcSwapDelta(Node node, Node nextNode,
+                              int nodeOldPos, int nodeNewPos,
+                              int nextNodeOldPos, int nextNodeNewPos, int currM){
+        clearTmpDeltaCross(node);
+        clearTmpDeltaCross(nextNode);
+        for (Edge nE : nextNode.outEdges) {
+            int nextNodeToPos = nE.sink.pos;
+            for (Edge E : node.outEdges) {
+                int nodeToPos = E.sink.pos;
+                if(nextNodeToPos == nodeToPos)continue;
+                int deltaCross = (isCross(nodeNewPos, nodeToPos, nextNodeNewPos, nextNodeToPos)?1:0)
+                        - (isCross(nodeOldPos, nodeToPos, nextNodeOldPos, nextNodeToPos)?1:0);
+                E.tmpDeltaCross += deltaCross;
+                nE.tmpDeltaCross += deltaCross;
+            }
+        }
+        for(Edge nE : nextNode.inEdges){
+            int nextNodeFromPos = nE.source.pos;
+            for (Edge E : node.inEdges){
+                int nodeFromPos = E.source.pos;
+                if(nextNodeFromPos == nodeFromPos)continue;
+                int deltaCross = (isCross(nodeFromPos, nodeNewPos, nextNodeFromPos, nextNodeNewPos)?1:0)
+                        - (isCross(nodeFromPos, nodeOldPos, nextNodeFromPos, nextNodeOldPos)?1:0);
+                E.tmpDeltaCross += deltaCross;
+                nE.tmpDeltaCross += deltaCross;
+            }
+        }
+
+        return countTmpDelta(node, nextNode, currM);
+    }
+
+    private void resetTmpCross(ArrayList<Node> layer, int lbIndex, int ubIndex){
+        for(int index = lbIndex; index <= ubIndex; ++index){
+            Node node = layer.get(index);
+            for (Edge e: node.outEdges){
+                e.tmpCross = e.cross;
+            }
+            for (Edge e:node.inEdges){
+                e.tmpCross = e.cross;
+            }
+        }
+    }
+
+    private void updateTmpCross(Node n){
+        for (Edge E : n.outEdges){
+            E.tmpCross += E.tmpDeltaCross;
+        }
+        for (Edge E : n.inEdges){
+            E.tmpCross += E.tmpDeltaCross;
+        }
+    }
+
+    private int countTmpDelta(Node node1, Node node2, int currM){
+        int delta = 0;
+        for (Edge E : node1.outEdges){
+            delta += clacDelta(E.tmpDeltaCross, E.tmpCross, currM);
+        }
+        for(Edge E : node1.inEdges){
+            delta += clacDelta(E.tmpDeltaCross, E.tmpCross, currM);
+        }
+        for(Edge E : node2.outEdges){
+            delta += clacDelta(E.tmpDeltaCross, E.tmpCross, currM);
+        }
+        for(Edge E : node2.inEdges){
+            delta += clacDelta(E.tmpDeltaCross, E.tmpCross, currM);
+        }
+        return delta;
+    }
+
+    private int clacDelta(int deltaCross, int oriCross, int currM){
+        int delta = 0;
+        int newCross = oriCross + deltaCross;
+        if(oriCross < currM && newCross == currM){
+            delta += 1;
+        }else if (oriCross <= currM && newCross > currM){
+            delta += LAMBDA * (newCross - currM);
+        }else if(oriCross == currM && newCross < currM){
+            delta -= 1;
+        }
+        return delta;
+    }
+
+    private class MvDisManager {
         private int[] lastDis = new int[DISTANCE_MEMORY];
         private int pos = 0;
 
-        void record(int dis){
+        void record(int dis) {
             lastDis[pos] = dis;
             ++pos;
             if (pos == lastDis.length) pos = 0;
         }
 
-        int getMax(){
+        int getMax() {
             int m = 0;
-            for (int d : lastDis){
+            for (int d : lastDis) {
                 if (d > m) m = d;
             }
             return m;
@@ -639,13 +638,13 @@ public class MMACSolver {
         }
 
         @Override
-        public int hashCode(){
+        public int hashCode() {
             return Objects.hash(ID);
         }
 
         @Override
-        public boolean equals(Object o){
-            return o!=null && o.getClass() == Node.class && ID == ((Node)o).ID;
+        public boolean equals(Object o) {
+            return o != null && o.getClass() == Node.class && ID == ((Node) o).ID;
         }
     }
 
@@ -654,6 +653,7 @@ public class MMACSolver {
         Node sink;
 
         int cross = 0;
+        int tmpCross = 0;
         int tmpDeltaCross = 0;
 
 
@@ -683,34 +683,34 @@ public class MMACSolver {
     private class Move {
         Node node;
         int newPos;
-        Delta delta;
+        int delta;
 
-        Move(Node n, int p, Delta d) {
+        Move(Node n, int p, int d) {
             node = n;
             newPos = p;
             delta = d;
         }
 
-        public String toString(){
-            return "Move Node: " + node.ID + ", " + node.pos + "->" + newPos + "/" +delta;
+        public String toString() {
+            return "Move Node: " + node.ID + ", " + node.pos + "->" + newPos + "/" + delta;
         }
     }
 
-    private class Solution{
+    private class Solution {
         int M;
         ArrayList<ArrayList<Integer>> sol;
         String instance;
         double time;
 
         Solution(MMACSolver solver, boolean isFinal) throws IOException {
-            time = (System.currentTimeMillis() - startTime)/1000.0;
+            time = (System.currentTimeMillis() - startTime) / 1000.0;
             solver.checkSolution();
             instance = solver.instance;
             M = allNodes.get(0).maxCross;
             sol = new ArrayList<>(solver.layers.size());
-            for (ArrayList<Node> layer : solver.layers){
+            for (ArrayList<Node> layer : solver.layers) {
                 ArrayList<Integer> nodeIndexes = new ArrayList<>(layer.size());
-                for (Node n : layer){
+                for (Node n : layer) {
                     nodeIndexes.add(n.ID);
                 }
                 sol.add(nodeIndexes);
@@ -719,7 +719,7 @@ public class MMACSolver {
         }
 
         void write(boolean isFinal) throws IOException {
-            String outFile = "sol/sol" + M + (isFinal ? "F" : "")  + ".txt";
+            String outFile = "sol/sol" + M + (isFinal ? "F" : "") + ".txt";
             BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
 
             bw.write(instance);
@@ -728,39 +728,13 @@ public class MMACSolver {
             bw.write("Objective: " + String.valueOf(M));
             bw.newLine();
             bw.write("Solution: \n");
-            for (ArrayList<Integer> layer : sol){
-                for (Integer n : layer){
+            for (ArrayList<Integer> layer : sol) {
+                for (Integer n : layer) {
                     bw.write(n + " ");
                 }
                 bw.newLine();
             }
             bw.close();
-        }
-    }
-
-    private class Delta implements Comparable{
-        int deltaM;
-        int deltaCross;
-        Delta(int dM, int dC){
-            deltaM = dM;
-            deltaCross = dC;
-        }
-
-        @Override
-        public String toString(){
-            return "dM: " + deltaM + ", dC: " + deltaCross;
-        }
-
-        @Override
-        public int compareTo(@NotNull Object o) {
-            Delta oo = (Delta)o;
-            if (deltaM < oo.deltaM){
-                return -1;
-            }else if (deltaM > oo.deltaM){
-                return 1;
-            }else{
-                return Integer.compare(deltaCross, oo.deltaCross);
-            }
         }
     }
 }
