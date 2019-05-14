@@ -8,6 +8,7 @@ public class MMACSolver {
     private final int LAMBDA = 10000;
     private final int MAX_MOVE_DISTANCE;
     private final int DISTANCE_MEMORY = 5;
+    private final double TIME_LIMIT = 60;
     private int moveMaxDistance;
     private ArrayList<ArrayList<Node>> layers;
     private ArrayList<Node> allNodes;
@@ -16,6 +17,7 @@ public class MMACSolver {
     private long startTime;
 
     Solution bestSol;
+    int iterationLS = 0;
 
     public MMACSolver(String instanceFile, int seed) throws IOException {
         random = seed >= 0 ? new Random(seed) : new Random();
@@ -75,8 +77,20 @@ public class MMACSolver {
 
     public void solve() throws IOException {
         startTime = System.currentTimeMillis();
+
         init();
-        localSearch();
+        bestSol = new Solution(this);
+        for(;;) {
+            localSearch();
+
+            double usedTime = (System.currentTimeMillis() - startTime)/1000.0;
+            if(usedTime < TIME_LIMIT){
+                randomShufflePerturb(0.3f);
+            }else{
+                break;
+            }
+        }
+        bestSol.write(true);
     }
 
     private void initM() {
@@ -118,8 +132,8 @@ public class MMACSolver {
 
     private void init() {
         System.out.println("Initializing...");
-        constructSolution();
-        //randomConstruction();
+        //constructSolution();
+        randomConstruction();
         initM();
         System.out.println("Initial obj: " + allNodes.get(0).maxCross);
     }
@@ -212,16 +226,18 @@ public class MMACSolver {
     }
 
     private void localSearch() throws IOException {
-        int iter = 0;
 
-        bestSol = new Solution(this, false);
+
+
         boolean wFlag = false;
         moveMaxDistance = MAX_MOVE_DISTANCE / 2;
-        for (; ; ++iter) {
+        for (; ; ++iterationLS) {
             Move mv = findMove();
             if (!wFlag && mv.delta >= 0) {
                 wFlag = true;
-                bestSol = new Solution(this, false);
+                if(bestSol.M > allNodes.get(0).maxCross) {
+                    bestSol = new Solution(this);
+                }
             }
 
             if (mv.delta >= 0) {
@@ -231,21 +247,21 @@ public class MMACSolver {
             makeMove(mv);
             int obj = allNodes.get(0).maxCross;
 
-            if (iter % 10 == 0) {
-                System.out.println("Iteration: " + iter + ", Obj:" + obj + ", MvDis: " + moveMaxDistance);
+            if (iterationLS % 500 == 0) {
+                System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M + ", MvDis: " + moveMaxDistance);
             }
             if (wFlag && obj < bestSol.M) {
-                bestSol = new Solution(this, false);
+                bestSol = new Solution(this);
             }
 
             if (obj == 0) break;
         }
 
         if (allNodes.get(0).maxCross <= bestSol.M) {
-            bestSol = new Solution(this, true);
+            bestSol = new Solution(this);
         }
-        System.out.println("Iteration: " + iter);
-        System.out.println(allNodes.get(0).maxCross);
+//        System.out.println("Iteration: " + iter);
+//        System.out.println(allNodes.get(0).maxCross);
     }
 
 
@@ -442,7 +458,7 @@ public class MMACSolver {
     private Move findMove() {
         int currM = allNodes.get(0).maxCross;
         Move bestMv = new Move(null, -1, Integer.MAX_VALUE);
-
+        int bestCount = 0;
         for (Node n : allNodes) {
             if (bestMv.delta < 0) {
                 break;
@@ -453,9 +469,15 @@ public class MMACSolver {
             Move move = tryMoveNeg(n, lbIndex, currM);
             if(move.delta < bestMv.delta){
                 bestMv = move;
+                bestCount = 1;
+            }else if(move.delta == bestMv.delta && random.nextInt(++bestCount) == 0){
+                bestMv = move;
             }
             move = tryMovePos(n, ubIndex, currM);
             if(move.delta < bestMv.delta){
+                bestMv = move;
+                bestCount = 1;
+            }else if(move.delta == bestMv.delta && random.nextInt(++bestCount) == 0){
                 bestMv = move;
             }
 
@@ -464,7 +486,8 @@ public class MMACSolver {
     }
 
     private Move tryMoveNeg(Node node, int lbIndex, int currM){
-        Move bestMove = new Move(null, -1, Integer.MAX_VALUE);
+        Move bestMv = new Move(null, -1, Integer.MAX_VALUE);
+        int bestCount = 0;
         ArrayList<Node> layer = layers.get(node.layerID);
         resetTmpCross(layer, lbIndex, node.pos);
 
@@ -474,20 +497,24 @@ public class MMACSolver {
             Node prevNode = layer.get(newIndex);
 
             delta += calcSwapDelta(prevNode, node, prevNode.pos, prevNode.pos + 1, nodeOldPos, prevNode.pos, currM);
-            if(delta < bestMove.delta){
-                bestMove = new Move(node, newIndex, delta);
+            if(delta < bestMv.delta){
+                bestMv = new Move(node, newIndex, delta);
+                bestCount = 1;
+            }else if(delta == bestMv.delta && random.nextInt(++bestCount) == 0){
+                bestMv = new Move(node, newIndex, delta);
             }
             updateTmpCross(node);
             updateTmpCross(prevNode);
             nodeOldPos = newIndex;
         }
 
-        return bestMove;
+        return bestMv;
     }
 
 
     private Move tryMovePos(Node node, int ubIndex, int currM) {
-        Move bestMove = new Move(null, -1, Integer.MAX_VALUE);
+        Move bestMv = new Move(null, -1, Integer.MAX_VALUE);
+        int bestCount = 0;
         ArrayList<Node> layer = layers.get(node.layerID);
         resetTmpCross(layer, node.pos, ubIndex);
 
@@ -497,14 +524,17 @@ public class MMACSolver {
             Node nextNode = layer.get(newIndex);
 
             delta += calcSwapDelta(node, nextNode, nodeOldPos, newIndex, nextNode.pos, nextNode.pos - 1, currM);
-            if(delta < bestMove.delta){
-                bestMove = new Move(node, newIndex, delta);
+            if(delta < bestMv.delta){
+                bestMv = new Move(node, newIndex, delta);
+                bestCount = 1;
+            }else if(delta == bestMv.delta && random.nextInt(++bestCount)==0){
+                bestMv = new Move(node, newIndex, delta);
             }
             updateTmpCross(node);
             updateTmpCross(nextNode);
             nodeOldPos = newIndex;
         }
-        return bestMove;
+        return bestMv;
     }
 
     private void clearTmpDeltaCross(Node n){
@@ -596,6 +626,19 @@ public class MMACSolver {
             delta -= 1;
         }
         return delta;
+    }
+
+    private void randomShufflePerturb(float strength){
+        for(ArrayList<Node> layer : layers){
+            int startIndex = random.nextInt((int)((1.0f-strength) * layer.size()));
+            int endIndex = startIndex + (int)(strength * layer.size());
+            Collections.shuffle(layer.subList(startIndex, endIndex), random);
+            for(int i =startIndex; i<endIndex; ++i){
+                layer.get(i).pos = i;
+            }
+        }
+
+        initM();
     }
 
     private class MvDisManager {
@@ -702,7 +745,7 @@ public class MMACSolver {
         String instance;
         double time;
 
-        Solution(MMACSolver solver, boolean isFinal) throws IOException {
+        Solution(MMACSolver solver) {
             time = (System.currentTimeMillis() - startTime) / 1000.0;
             solver.checkSolution();
             instance = solver.instance;
@@ -715,11 +758,12 @@ public class MMACSolver {
                 }
                 sol.add(nodeIndexes);
             }
-            write(isFinal);
+
         }
 
         void write(boolean isFinal) throws IOException {
-            String outFile = "sol/sol" + M + (isFinal ? "F" : "") + ".txt";
+            String outFile = "sol/" + (isFinal ? instance.substring(10) + ".sol": "sol" + M + ".txt");
+            //String outFile = "sol/sol" + M + (isFinal ? "F" : "") + ".txt";
             BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
 
             bw.write(instance);
