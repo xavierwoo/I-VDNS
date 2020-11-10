@@ -8,7 +8,8 @@ public class MMACSolver {
     private final int LAMBDA = 10000;
     private final int MAX_MOVE_DISTANCE;
     private final int DISTANCE_MEMORY = 5;
-    private final double TIME_LIMIT = 60;
+    private final double TIME_LIMIT = 15;
+    private final float PERTURB_STRENGTH = 0.1f;
     private int moveMaxDistance;
     private ArrayList<ArrayList<Node>> layers;
     private ArrayList<Node> allNodes;
@@ -16,8 +17,10 @@ public class MMACSolver {
     private String instance;
     private long startTime;
 
-    Solution bestSol;
-    int iterationLS = 0;
+    private Solution bestSol;
+    int iterationLS = 1;
+
+    //private BufferedWriter bw;
 
     public MMACSolver(String instanceFile, int seed) throws IOException {
         random = seed >= 0 ? new Random(seed) : new Random();
@@ -78,6 +81,8 @@ public class MMACSolver {
     public void solve() throws IOException {
         startTime = System.currentTimeMillis();
 
+        //bw = new BufferedWriter(new FileWriter("objTime.txt"));
+
         init();
         bestSol = new Solution(this);
         for(;;) {
@@ -85,12 +90,19 @@ public class MMACSolver {
 
             double usedTime = (System.currentTimeMillis() - startTime)/1000.0;
             if(usedTime < TIME_LIMIT){
-                randomShufflePerturb(0.3f);
-            }else{
+                randomShufflePerturb(PERTURB_STRENGTH);
+            }else {
                 break;
             }
+            if (bestSol.M == 0)break;
         }
-        bestSol.write(true);
+        //bestSol.write(true);
+
+       // bw.close();
+    }
+
+    public Solution getBestSol() {
+        return bestSol;
     }
 
     private void initM() {
@@ -230,8 +242,13 @@ public class MMACSolver {
 
 
         boolean wFlag = false;
-        moveMaxDistance = MAX_MOVE_DISTANCE / 2;
+        moveMaxDistance = MAX_MOVE_DISTANCE;
+
+
         for (; ; ++iterationLS) {
+
+            //bw.write(iterationLS + "," + allNodes.get(0).maxCross + "\n");
+
             Move mv = findMove();
             if (!wFlag && mv.delta >= 0) {
                 wFlag = true;
@@ -241,23 +258,25 @@ public class MMACSolver {
             }
 
             if (mv.delta >= 0) {
+                iterationLS++;
                 break;
             }
 
             makeMove(mv);
             int obj = allNodes.get(0).maxCross;
 
-            if (iterationLS % 500 == 0) {
+            if (iterationLS % 1000 == 0) {
                 System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M + ", MvDis: " + moveMaxDistance);
             }
             if (wFlag && obj < bestSol.M) {
+                System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M + ", MvDis: " + moveMaxDistance);
                 bestSol = new Solution(this);
             }
 
             if (obj == 0) break;
         }
 
-        if (allNodes.get(0).maxCross <= bestSol.M) {
+        if (allNodes.get(0).maxCross < bestSol.M) {
             bestSol = new Solution(this);
         }
 //        System.out.println("Iteration: " + iter);
@@ -270,7 +289,7 @@ public class MMACSolver {
     }
 
     public double getTime() {
-        return bestSol.time;
+        return bestSol.timeToSol;
     }
 
 
@@ -630,14 +649,15 @@ public class MMACSolver {
 
     private void randomShufflePerturb(float strength){
         for(ArrayList<Node> layer : layers){
+            if(layer.size() == 1)continue;
             int startIndex = random.nextInt((int)((1.0f-strength) * layer.size()));
-            int endIndex = startIndex + (int)(strength * layer.size());
+            int endIndex = startIndex + (int)(strength * layer.size())+1;
+
             Collections.shuffle(layer.subList(startIndex, endIndex), random);
             for(int i =startIndex; i<endIndex; ++i){
                 layer.get(i).pos = i;
             }
         }
-
         initM();
     }
 
@@ -739,14 +759,27 @@ public class MMACSolver {
         }
     }
 
-    private class Solution {
-        int M;
+    public class Solution {
+        private int M;
         ArrayList<ArrayList<Integer>> sol;
-        String instance;
-        double time;
+        private String instance;
+        private double timeToSol;
+        private int iterations;
+
+        public int getM(){
+            return M;
+        }
+
+        public double getTimeToSol(){
+            return timeToSol;
+        }
+
+        public int getIterations(){
+            return iterations;
+        }
 
         Solution(MMACSolver solver) {
-            time = (System.currentTimeMillis() - startTime) / 1000.0;
+            timeToSol = (System.currentTimeMillis() - startTime) / 1000.0;
             solver.checkSolution();
             instance = solver.instance;
             M = allNodes.get(0).maxCross;
@@ -758,17 +791,18 @@ public class MMACSolver {
                 }
                 sol.add(nodeIndexes);
             }
-
+            iterations = solver.iterationLS;
         }
 
-        void write(boolean isFinal) throws IOException {
+        public void write(boolean isFinal) throws IOException {
             String outFile = "sol/" + (isFinal ? instance.substring(10) + ".sol": "sol" + M + ".txt");
             //String outFile = "sol/sol" + M + (isFinal ? "F" : "") + ".txt";
             BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
 
             bw.write(instance);
             bw.newLine();
-            bw.write("Time: " + time + " seconds\n");
+            bw.write("Time: " + timeToSol + " seconds\n");
+            bw.write("Iterations: " + iterations + "\n");
             bw.write("Objective: " + String.valueOf(M));
             bw.newLine();
             bw.write("Solution: \n");
