@@ -8,7 +8,7 @@ public class MMACSolver {
     private final int LAMBDA = 10000;
     private final int MAX_MOVE_DISTANCE;
     private final int DISTANCE_MEMORY = 5;
-    private final double TIME_LIMIT = 15;
+    private final double TIME_LIMIT = 60;
     private final float PERTURB_STRENGTH = 0.1f;
     private int moveMaxDistance;
     private ArrayList<ArrayList<Node>> layers;
@@ -575,8 +575,9 @@ public class MMACSolver {
             for (Edge E : node.outEdges) {
                 int nodeToPos = E.sink.pos;
                 if(nextNodeToPos == nodeToPos)continue;
-                int deltaCross = (isCross(nodeNewPos, nodeToPos, nextNodeNewPos, nextNodeToPos)?1:0)
-                        - (isCross(nodeOldPos, nodeToPos, nextNodeOldPos, nextNodeToPos)?1:0);
+//                int deltaCross = (isCross(nodeNewPos, nodeToPos, nextNodeNewPos, nextNodeToPos)?1:0)
+//                        - (isCross(nodeOldPos, nodeToPos, nextNodeOldPos, nextNodeToPos)?1:0);
+                int deltaCross = isCross(nodeOldPos, nodeToPos, nextNodeOldPos, nextNodeToPos)?-1:1;
                 E.tmpDeltaCross += deltaCross;
                 nE.tmpDeltaCross += deltaCross;
             }
@@ -586,8 +587,9 @@ public class MMACSolver {
             for (Edge E : node.inEdges){
                 int nodeFromPos = E.source.pos;
                 if(nextNodeFromPos == nodeFromPos)continue;
-                int deltaCross = (isCross(nodeFromPos, nodeNewPos, nextNodeFromPos, nextNodeNewPos)?1:0)
-                        - (isCross(nodeFromPos, nodeOldPos, nextNodeFromPos, nextNodeOldPos)?1:0);
+//                int deltaCross = (isCross(nodeFromPos, nodeNewPos, nextNodeFromPos, nextNodeNewPos)?1:0)
+//                        - (isCross(nodeFromPos, nodeOldPos, nextNodeFromPos, nextNodeOldPos)?1:0);
+                int deltaCross = isCross(nodeFromPos, nodeOldPos, nextNodeFromPos, nextNodeOldPos)?-1:1;
                 E.tmpDeltaCross += deltaCross;
                 nE.tmpDeltaCross += deltaCross;
             }

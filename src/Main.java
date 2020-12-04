@@ -27,7 +27,8 @@ public class Main {
 
     static ArrayList<String> testConnected(){
 
-        String[] ins = {"connected/c1000_2000_100_2_1.txt",
+        String[] ins = {
+                "connected/c1000_2000_100_2_1.txt",
                 "connected/c1000_2000_100_2_2.txt",
                 "connected/c1000_2000_100_2_3.txt",
                 "connected/c1000_2000_25_2_1.txt",
@@ -132,7 +133,8 @@ public class Main {
     }
 
     static ArrayList<String> testNorth(){
-        String[] ins = {"North/north.30.29.11.txt",
+        String[] ins = {
+                "North/north.30.29.11.txt",
                 "North/north.30.29.12.txt",
                 "North/north.30.29.7.txt",
                 "North/north.30.33.19.txt",
@@ -200,7 +202,8 @@ public class Main {
     }
 
     static ArrayList<String> testRome(){
-        String[] ins = {"Rome/rome.10.10.43.txt",
+        String[] ins = {
+                "Rome/rome.10.10.43.txt",
                 "Rome/rome.10.10.54.txt",
                 "Rome/rome.11.12.65.txt",
                 "Rome/rome.11.17.88.txt",
@@ -304,11 +307,11 @@ public class Main {
         bf.write("\ninstance, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, best, bestTime, bestIter\n");
         bf.close();
 
-//        ArrayList<String> instances = testConnected();
-        ArrayList<String> instances = testUniform();
+        ArrayList<String> instances = testConnected();
+//        ArrayList<String> instances = testUniform();
 //        ArrayList<String> instances = testNorth();
 //        ArrayList<String> instances = testRome();
-
+//
         for(String instance : instances) {
             ArrayList<MMACSolver.Solution> sols = new ArrayList<>();
 
