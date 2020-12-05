@@ -20,8 +20,6 @@ public class MMACSolver {
     private Solution bestSol;
     int iterationLS = 1;
 
-    //private BufferedWriter bw;
-
     public MMACSolver(String instanceFile, int seed) throws IOException {
         random = seed >= 0 ? new Random(seed) : new Random();
         instance = instanceFile;
@@ -81,8 +79,6 @@ public class MMACSolver {
     public void solve() throws IOException {
         startTime = System.currentTimeMillis();
 
-        //bw = new BufferedWriter(new FileWriter("objTime.txt"));
-
         init();
         bestSol = new Solution(this);
         for(;;) {
@@ -96,9 +92,6 @@ public class MMACSolver {
             }
             if (bestSol.M == 0)break;
         }
-        //bestSol.write(true);
-
-       // bw.close();
     }
 
     public Solution getBestSol() {
@@ -144,7 +137,6 @@ public class MMACSolver {
 
     private void init() {
         System.out.println("Initializing...");
-        //constructSolution();
         randomConstruction();
         initM();
         System.out.println("Initial obj: " + allNodes.get(0).maxCross);
@@ -247,8 +239,6 @@ public class MMACSolver {
 
         for (; ; ++iterationLS) {
 
-            //bw.write(iterationLS + "," + allNodes.get(0).maxCross + "\n");
-
             Move mv = findMove();
             if (!wFlag && mv.delta >= 0) {
                 wFlag = true;
@@ -279,8 +269,6 @@ public class MMACSolver {
         if (allNodes.get(0).maxCross < bestSol.M) {
             bestSol = new Solution(this);
         }
-//        System.out.println("Iteration: " + iter);
-//        System.out.println(allNodes.get(0).maxCross);
     }
 
 
@@ -798,7 +786,6 @@ public class MMACSolver {
 
         public void write(boolean isFinal) throws IOException {
             String outFile = "sol/" + (isFinal ? instance.substring(10) + ".sol": "sol" + M + ".txt");
-            //String outFile = "sol/sol" + M + (isFinal ? "F" : "") + ".txt";
             BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
 
             bw.write(instance);
