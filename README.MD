@@ -6,7 +6,7 @@ MMAC.jar is the executable file.
 To run the code, using the following command:
 
 ```
-java -jar MMAC.jar <time_limit_in_seconds> <run_time>
+java -jar MMAC.jar <time_limit_in_seconds> <run_times>
 ```
 
 For example, 
