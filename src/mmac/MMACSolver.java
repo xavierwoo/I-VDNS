@@ -8,7 +8,7 @@ public class MMACSolver {
     private final int LAMBDA = 10000;
     private final int MAX_MOVE_DISTANCE;
     private final int DISTANCE_MEMORY = 5;
-    private final double TIME_LIMIT = 60;
+    private double TIME_LIMIT = 60;
     private final float PERTURB_STRENGTH = 0.1f;
     private int moveMaxDistance;
     private ArrayList<ArrayList<Node>> layers;
@@ -74,6 +74,10 @@ public class MMACSolver {
             if (md < layer.size()) md = layer.size();
         }
         MAX_MOVE_DISTANCE = md;
+    }
+
+    public void setTIME_LIMIT(double time_limit){
+        TIME_LIMIT = time_limit;
     }
 
     public void solve() throws IOException {

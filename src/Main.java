@@ -302,46 +302,37 @@ public class Main {
     public static void main(String[] args) throws IOException {
 	// write your code here
 
+        String instance = args[0];
+        double time_limit = Integer.parseInt(args[1]);
+        int run_time = Integer.parseInt(args[2]);
         String resFile = "resTotal.csv";
         BufferedWriter bf = new BufferedWriter(new FileWriter(resFile, true));
-        bf.write("\ninstance, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, best, bestTime, bestIter\n");
+        bf.write("\ninstance");
+        for(int i=0; i<run_time; ++i){
+            bf.write(", " + i);
+        }
+        bf.write(", best\n" + instance + ",");
         bf.close();
 
-        ArrayList<String> instances = testConnected();
-//        ArrayList<String> instances = testUniform();
-//        ArrayList<String> instances = testNorth();
-//        ArrayList<String> instances = testRome();
-//
-        for(String instance : instances) {
-            ArrayList<MMACSolver.Solution> sols = new ArrayList<>();
+        ArrayList<MMACSolver.Solution> sols = new ArrayList<>();
+        for (int i = 0; i < run_time; ++i) {
+            System.out.println(instance + "\t run " + i);
+            MMACSolver solver = new MMACSolver(instance, i);
+            solver.setTIME_LIMIT(time_limit);
+            solver.solve();
+            MMACSolver.Solution solution = solver.getBestSol();
+            sols.add(solution);
 
             bf = new BufferedWriter(new FileWriter(resFile, true));
-            bf.write(instance);
+            bf.write(String.valueOf(solution.getM()));
             bf.write(",");
-            bf.close();
-
-            for (int i = 0; i < 10; ++i) {
-                System.out.println(instance + "\t run " + i);
-                MMACSolver solver = new MMACSolver(instance, i);
-                solver.solve();
-                MMACSolver.Solution solution = solver.getBestSol();
-                sols.add(solution);
-
-                bf = new BufferedWriter(new FileWriter(resFile, true));
-                bf.write(String.valueOf(solution.getM()));
-                bf.write(",");
-                bf.close();
-            }
-
-            MMACSolver.Solution bestSol = sols.stream().min(Comparator.comparing(MMACSolver.Solution::getM)).get();
-            bf = new BufferedWriter(new FileWriter(resFile, true));
-            bf.write(String.valueOf(bestSol.getM()));
-            bf.write(",");
-            bf.write(String.valueOf(bestSol.getTimeToSol()));
-            bf.write(",");
-            bf.write(String.valueOf(bestSol.getIterations()));
-            bf.write("\n");
             bf.close();
         }
+
+        MMACSolver.Solution bestSol = sols.stream().min(Comparator.comparing(MMACSolver.Solution::getM)).get();
+        bf = new BufferedWriter(new FileWriter(resFile, true));
+        bf.write(String.valueOf(bestSol.getM()));
+        bf.write("\n");
+        bf.close();
     }
 }
