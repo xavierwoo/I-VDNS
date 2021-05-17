@@ -30,7 +30,7 @@ For example,
 java -jar MMAC.jar uniform/noug3-rnd-001.txt 60 10 0.5 0.1
 ```
 
-will test the instance uniform/noug3-rnd-001.txt for 10 times, the time limit for each run is 60 seconds.
+will test the instance uniform/noug3-rnd-001.txt 10 times, the time limit for each run is 60 seconds.
 For these ten runs, the maximum length of the move chain is $0.5\kappa$, while the perturbation strength is 0.1.
 The recommended parameter setting in the paper is
 
@@ -56,7 +56,7 @@ The second line gives the number of vertices in each layer.
 
 Each of the following lines represents one arc.
 
-Take the instance north.30.29.7 as example. The following is the first ten lines of this instance.
+Take the instance north.30.29.7 as an example. The following are the first ten lines of this instance.
 
 ```
 30 29 7
@@ -78,7 +78,7 @@ The following lines represent the edges.
 
 ## The output description
 
-The following is the first few lines of the standard output of the algorithm.
+The following are the first few lines of the standard output of the algorithm.
 
 ```
 uniform/noug3-rnd-001.txt	 run 0
