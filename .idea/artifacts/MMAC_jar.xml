@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="MMAC:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/MMAC_jar</output-path>
+    <root id="archive" name="MMAC.jar">
+      <element id="module-output" name="MMAC" />
+      <element id="extracted-dir" path="$APPLICATION_HOME_DIR$/redist/annotations-java8.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

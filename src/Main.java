@@ -305,6 +305,9 @@ public class Main {
         String instance = args[0];
         double time_limit = Integer.parseInt(args[1]);
         int run_time = Integer.parseInt(args[2]);
+        float p_denominator = Float.parseFloat(args[3]);
+        float perturb_str = Float.parseFloat(args[4]);
+
         String resFile = "resTotal.csv";
         BufferedWriter bf = new BufferedWriter(new FileWriter(resFile, true));
         bf.write("\ninstance");
@@ -319,6 +322,8 @@ public class Main {
             System.out.println(instance + "\t run " + i);
             MMACSolver solver = new MMACSolver(instance, i);
             solver.setTIME_LIMIT(time_limit);
+            solver.setMAX_MOVE_DISTANCE_DENOMINATOR(p_denominator);
+            solver.setPERTURB_STRENGTH(perturb_str);
             solver.solve();
             MMACSolver.Solution solution = solver.getBestSol();
             sols.add(solution);
@@ -327,6 +332,7 @@ public class Main {
             bf.write(String.valueOf(solution.getM()));
             bf.write(",");
             bf.close();
+            //solution.write(i);
         }
 
         MMACSolver.Solution bestSol = sols.stream().min(Comparator.comparing(MMACSolver.Solution::getM)).get();

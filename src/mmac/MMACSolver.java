@@ -5,11 +5,13 @@ import java.util.*;
 
 public class MMACSolver {
 
+    private float PERTURB_STRENGTH = 0.1f;
+    private float MAX_MOVE_DISTANCE_DENOMINATOR = 1.0f;
+    private double TIME_LIMIT = 60;
+
     private final int LAMBDA = 10000;
     private final int MAX_MOVE_DISTANCE;
     private final int DISTANCE_MEMORY = 5;
-    private double TIME_LIMIT = 60;
-    private final float PERTURB_STRENGTH = 0.1f;
     private int moveMaxDistance;
     private ArrayList<ArrayList<Node>> layers;
     private ArrayList<Node> allNodes;
@@ -47,7 +49,7 @@ public class MMACSolver {
         int layerId = 0;
         for (String s : data) {
             int eIndex = sIndex + Integer.parseInt(s);
-            var lay = new ArrayList<>(allNodes.subList(sIndex, eIndex));
+            ArrayList<Node> lay = new ArrayList<>(allNodes.subList(sIndex, eIndex));
             for (int i = 0; i < lay.size(); ++i) {
                 lay.get(i).pos = i;
                 lay.get(i).layerID = layerId;
@@ -73,13 +75,14 @@ public class MMACSolver {
         for (ArrayList<Node> layer : layers) {
             if (md < layer.size()) md = layer.size();
         }
-        MAX_MOVE_DISTANCE = md;
+        MAX_MOVE_DISTANCE = (int) (md * MAX_MOVE_DISTANCE_DENOMINATOR);
     }
 
     public void setTIME_LIMIT(double time_limit){
         TIME_LIMIT = time_limit;
     }
-
+    public void setPERTURB_STRENGTH(float strength){ PERTURB_STRENGTH = strength;}
+    public void setMAX_MOVE_DISTANCE_DENOMINATOR(float d){ MAX_MOVE_DISTANCE_DENOMINATOR = d;}
     public void solve() throws IOException {
         startTime = System.currentTimeMillis();
 
@@ -120,7 +123,7 @@ public class MMACSolver {
      * @param l pos of the layer
      * @return whether is a cross
      */
-    private boolean isCross(int i, int j, int k, int l) {
+    static boolean isCross(int i, int j, int k, int l) {
         return i < k && j > l
                 ||
                 i > k && j < l;
@@ -157,8 +160,8 @@ public class MMACSolver {
     }
 
     private void constructSolution() {
-        var CL = new HashSet<Node>();
-        var V = new HashSet<Node>();
+        HashSet<Node> CL = new HashSet<>();
+        HashSet<Node> V = new HashSet<>();
         for (ArrayList<Node> layer : layers) {
             CL.addAll(layer);
         }
@@ -189,7 +192,7 @@ public class MMACSolver {
     }
 
     private int findBCNearst(ArrayList<Node> layer, int bc, HashSet<Node> V) {
-        var usedPos = new HashSet<Integer>();
+        HashSet<Integer> usedPos = new HashSet<>();
         for (Node node : layer) {
             if (V.contains(node)) {
                 usedPos.add(node.pos);
@@ -221,7 +224,7 @@ public class MMACSolver {
     }
 
     private ArrayList<Node> getRCL(HashSet<Node> V) {
-        var RCL = new ArrayList<Node>();
+        ArrayList<Node> RCL = new ArrayList<>();
         for (Node node : V) {
             for (Edge e : node.outEdges) {
                 RCL.add(e.sink);
@@ -260,10 +263,10 @@ public class MMACSolver {
             int obj = allNodes.get(0).maxCross;
 
             if (iterationLS % 1000 == 0) {
-                System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M + ", MvDis: " + moveMaxDistance);
+                System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M);
             }
             if (wFlag && obj < bestSol.M) {
-                System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M + ", MvDis: " + moveMaxDistance);
+                System.out.println("Iteration: " + iterationLS + ", Obj: " + obj + ", Best: " + bestSol.M);
                 bestSol = new Solution(this);
             }
 
@@ -400,7 +403,7 @@ public class MMACSolver {
     }
 
     private void recalcNodeMaxCross(ArrayList<Node> layer, int lbIndex, int ubIndex) {
-        var recalcedNode = new HashSet<Node>();
+        HashSet<Node> recalcedNode = new HashSet<>();
         for (int i = lbIndex; i <= ubIndex; ++i) {
             Node node = layer.get(i);
             calcNodeMaxCross(node);
@@ -655,25 +658,6 @@ public class MMACSolver {
         initM();
     }
 
-    private class MvDisManager {
-        private int[] lastDis = new int[DISTANCE_MEMORY];
-        private int pos = 0;
-
-        void record(int dis) {
-            lastDis[pos] = dis;
-            ++pos;
-            if (pos == lastDis.length) pos = 0;
-        }
-
-        int getMax() {
-            int m = 0;
-            for (int d : lastDis) {
-                if (d > m) m = d;
-            }
-            return m;
-        }
-    }
-
     private class Node {
         int ID;
         int layerID;
@@ -687,6 +671,15 @@ public class MMACSolver {
         Node(int id, int lyid) {
             ID = id;
             layerID = lyid;
+        }
+
+        Node(Node cp_node){
+            ID = cp_node.ID;
+            layerID = cp_node.layerID;
+            pos = cp_node.pos;
+            maxCross = cp_node.maxCross;
+            outEdges.addAll(cp_node.outEdges);
+            inEdges.addAll(cp_node.inEdges);
         }
 
         @Override
@@ -756,9 +749,11 @@ public class MMACSolver {
     public class Solution {
         private int M;
         ArrayList<ArrayList<Integer>> sol;
+        HashMap<Edge, ArrayList<Edge>> crossing_edges = new HashMap<>();
         private String instance;
         private double timeToSol;
         private int iterations;
+        private int checking_max = 0;
 
         public int getM(){
             return M;
@@ -779,24 +774,52 @@ public class MMACSolver {
             M = allNodes.get(0).maxCross;
             sol = new ArrayList<>(solver.layers.size());
             for (ArrayList<Node> layer : solver.layers) {
-                ArrayList<Integer> nodeIndexes = new ArrayList<>(layer.size());
+                ArrayList<Integer> nodes = new ArrayList<>(layer.size());
                 for (Node n : layer) {
-                    nodeIndexes.add(n.ID);
+                    nodes.add(n.ID);
                 }
-                sol.add(nodeIndexes);
+                sol.add(nodes);
             }
             iterations = solver.iterationLS;
+            organize_crossing_map(solver.layers);
+            if(checking_max != M){
+                throw new Error("Solution error!");
+            }
         }
 
-        public void write(boolean isFinal) throws IOException {
-            String outFile = "sol/" + (isFinal ? instance.substring(10) + ".sol": "sol" + M + ".txt");
-            BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
+        private void organize_crossing_map(ArrayList<ArrayList<Node>> layers){
+            for(ArrayList<Node> layer : layers){
+                for(Node node_i : layer){
+                    int i = node_i.pos;
+                    for(Edge edge : node_i.outEdges){
+                        int j = edge.sink.pos;
+                        ArrayList<Edge> c_edges = new ArrayList<>();
+                        for(Node node_k : layer){
+                            int k = node_k.pos;
+                            for(Edge edge_cp : node_k.outEdges){
+                                int l = edge_cp.sink.pos;
+                                if(isCross(i,j,k,l)){
+                                    c_edges.add(edge_cp);
+                                }
+                            }
+                        }
+                        crossing_edges.put(edge, c_edges);
+                        if(checking_max<c_edges.size()){
+                            checking_max = c_edges.size();
+                        }
+                    }
+                }
+            }
+        }
 
+        public void write(int run) throws IOException {
+            String outFile = "sol/" + instance.substring(10) + "_sol_run" + run+ "_res" + M + ".txt";
+            BufferedWriter bw = new BufferedWriter(new FileWriter(outFile));
             bw.write(instance);
             bw.newLine();
             bw.write("Time: " + timeToSol + " seconds\n");
             bw.write("Iterations: " + iterations + "\n");
-            bw.write("Objective: " + String.valueOf(M));
+            bw.write("Objective: " + M);
             bw.newLine();
             bw.write("Solution: \n");
             for (ArrayList<Integer> layer : sol) {
@@ -804,6 +827,18 @@ public class MMACSolver {
                     bw.write(n + " ");
                 }
                 bw.newLine();
+            }
+
+            bw.write("Crossings:\n");
+
+            for(Map.Entry<Edge, ArrayList<Edge>> entry: crossing_edges.entrySet()){
+                Edge edge = entry.getKey();
+                ArrayList<Edge> c_edges = entry.getValue();
+                bw.write("\tCrossings on " + edge + ":" + c_edges.size() + "//");
+                for(Edge edge_c : c_edges){
+                    bw.write(edge_c + " ");
+                }
+                bw.write("\n");
             }
             bw.close();
         }
